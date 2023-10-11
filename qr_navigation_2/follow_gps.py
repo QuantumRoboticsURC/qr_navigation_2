@@ -26,6 +26,9 @@ class FollowGPS(Node):
 		self.target_latitude = 0.0
 		self.target_longitude = 0.0
 
+		self.linear_velocity = 0.33
+		self.angular_velocity = 0.2
+
 	def euler_from_quaternion(self,x, y, z, w):
 	        """
 	        Convert a quaternion into euler angles (roll, pitch, yaw)
@@ -52,23 +55,26 @@ class FollowGPS(Node):
 		angle = (np.atan2(self.y,self.x)+2*math.pi)%2*math.pi
 		
 		if(self.angle>angle):
-			self.twist.angular.z = -0.2
 			while(self.angle>angle):
+				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
 			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
 		else:
-			self.twist.angular.z = 0.2
 			while(self.angle>angle):
+				self.twist.angular.z = (abs((self.angle - 0)) * (0.2- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
 			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
-		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
 
+		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
+		control = distance
+		
 		while(distance>0):
 			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
-			self.twist.linear.x = 0.33
+			self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
 			self.cmd_vel.publish(self.twist)
+
 		self.twist.linear.x = 0.0
 		self.cmd_vel.publish(self.twist)
 
