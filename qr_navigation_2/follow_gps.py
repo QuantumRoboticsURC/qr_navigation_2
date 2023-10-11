@@ -52,20 +52,19 @@ class FollowGPS(Node):
 	def follow(self):
 		
 		x,y = ll2xy(self.gps_coordinates[0],self.gps_coordinates[1],self.orglat,self.orglong,)
-		angle = (np.atan2(self.y,self.x)+2*math.pi)%2*math.pi
+		target_angle = (np.atan2(self.y,self.x)+2*math.pi)%2*math.pi
 		
-		if(self.angle>angle):
-			while(self.angle>angle):
+		if(self.angle>target_angle):
+			while(self.angle>target_angleangle):
 				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
-			self.twist.angular.z=0.0
-			self.cmd_vel.publish(self.twist)
 		else:
-			while(self.angle>angle):
+			while(self.angle<target_angle):
 				self.twist.angular.z = (abs((self.angle - 0)) * (0.2- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
-			self.twist.angular.z=0.0
-			self.cmd_vel.publish(self.twist)
+		
+		self.twist.angular.z=0.0
+		self.cmd_vel.publish(self.twist)
 
 		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
 		control = distance
