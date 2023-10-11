@@ -9,14 +9,13 @@ import math
 class FollowGPS(Node):
 	def __init__(self):
 		super().__init__('follow_gps')
-		
+		#Probably will be replaced for a service 
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
 		self.timer = self.create_timer(0.5,self.follow)
 		self.my_rover_position = self.create_subscription(NavSatFix,'gps',self.update_position,10)
 		self.my_rover_angle = self.create_subscription(Imu,'Imu',self.update_angle,10)
 		self.twist = Twist()
 
-		self.angle = 0.0
 		self.gps_coordinates = [0.0,0.0]
 		self.rover_orientation = [0.0,0.0,0.0]
 		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
@@ -85,9 +84,9 @@ class FollowGPS(Node):
 
 
 	def update_position(self,msg):
-		self.gps_coordinates[0] = msg.latitud
+		self.gps_coordinates[0] = msg.latitude
 		self.gps_coordinates[1] = msg.longitude
-		self.x_rover,self.y_rover = ll2xy(msg.latitud,msg.longitude,self.orglat,self.orglong)
+		self.x_rover,self.y_rover = ll2xy(msg.latitude,msg.longitude,self.orglat,self.orglong)
 
 
 	def set_origin(orglat,orglong):
@@ -95,5 +94,5 @@ class FollowGPS(Node):
 		self.orglong = orglong
 
 	def set_target_coordinates(self,latitude,longitude):
-		self.target_latitude=latitud
+		self.target_latitude=latitude
 		self.target_longitude=longitude
