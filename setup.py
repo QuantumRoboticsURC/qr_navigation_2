@@ -1,6 +1,7 @@
 from setuptools import setup
 
 package_name = 'qr_navigation_2'
+submodules ="qr_navigation_2/submodules"
 
 setup(
     name=package_name,

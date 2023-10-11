@@ -2,7 +2,7 @@ import rclcpy
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
 from rclpy import Node 
-from alvinxy import *
+from .submodules.alvinxy import *
 import numpy
 import math 
 
@@ -14,40 +14,43 @@ class FollowGPS(Node):
 		self.timer = self.create_timer(0.5,self.follow)
 		self.my_rover_position = self.create_subscription(NavSatFix,'gps',self.update_position,10)
 		self.my_rover_angle = self.create_subscription(Imu,'Imu',self.update_angle,10)
-		self.my_rover_angle = None
-		self.gps_coordinates = (0.0,0.0)
-		self.rover_orientation = (0.0,0.0,0.0)
-		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
-		self.orglong = 0.0
-		self.orglat = 0.0
 		self.twist = Twist()
 
-def euler_from_quaternion(x, y, z, w):
-        """
-        Convert a quaternion into euler angles (roll, pitch, yaw)
-        roll is rotation around x in radians (counterclockwise)
-        pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
-        """
-        t0 = +2.0 * (w * x + y * z)
-        t1 = +1.0 - 2.0 * (x * x + y * y)
-        roll_x = math.atan2(t0, t1)
-     
-        t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
-        pitch_y = math.asin(t2)
-     
-        t3 = +2.0 * (w * z + x * y)
-        t4 = +1.0 - 2.0 * (y * y + z * z)
-        yaw_z = math.atan2(t3, t4)
-     
-        return roll_x, pitch_y, yaw_z # in radians
+		self.angle = 0.0
+		self.gps_coordinates = [0.0,0.0]
+		self.rover_orientation = [0.0,0.0,0.0]
+		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
 
-	def follow(self,longitude,latitud):
-		self.x,self.y = ll2xy(longitude,latitud,self.orglong,self.orglat)
-		angle = (np.atan2(self.y,self.x)+2*math.pi)%math.pi
+		self.orglong = 0.0
+		self.orglat = 0.0
+		self.target_latitude = 0.0
+		self.target_longitude = 0.0
 
+	def euler_from_quaternion(self,x, y, z, w):
+	        """
+	        Convert a quaternion into euler angles (roll, pitch, yaw)
+	        roll is rotation around x in radians (counterclockwise)
+	        pitch is rotation around y in radians (counterclockwise)
+	        yaw is rotation around z in radians (counterclockwise)
+	        """
+	        t0 = +2.0 * (w * x + y * z)
+	        t1 = +1.0 - 2.0 * (x * x + y * y)
+	        roll_x = math.atan2(t0, t1)
+	        t2 = +2.0 * (w * y - z * x)
+	        t2 = +1.0 if t2 > +1.0 else t2
+	        t2 = -1.0 if t2 < -1.0 else t2
+	        pitch_y = math.asin(t2)
+	        t3 = +2.0 * (w * z + x * y)
+	        t4 = +1.0 - 2.0 * (y * y + z * z)
+	        yaw_z = math.atan2(t3, t4)
+	     
+	        return roll_x, pitch_y, yaw_z # in radians
+
+	def follow(self):
+		
+		x,y = ll2xy(self.gps_coordinates[0],self.gps_coordinates[1],self.orglat,self.orglong,)
+		angle = (np.atan2(self.y,self.x)+2*math.pi)%2*math.pi
+		
 		if(self.angle>angle):
 			self.twist.angular.z = -0.2
 			while(self.angle>angle):
@@ -60,23 +63,32 @@ def euler_from_quaternion(x, y, z, w):
 				self.cmd_vel.publish(self.twist)
 			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
-		
+		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
+
+		while(distance>0):
+			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
+			self.twist.linear.x = 0.33
+			self.cmd_vel.publish(self.twist)
+		self.twist.linear.x = 0.0
+		self.cmd_vel.publish(self.twist)
 
 	def update_angle(self,msg):
 		quat = Quaternion()
 		quat = msg.orientation
-		angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
+		angle_x,angle_y,angle_z = self.euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
 		self.angle = angle_z
 
-	
 
 	def update_position(self,msg):
 		self.gps_coordinates[0] = msg.latitud
 		self.gps_coordinates[1] = msg.longitude
-		x,y = ll2xy(msg.longitude,msg.latitud,self.orglong,self.orglat)
-		self.x_rover= x
-		self.y_rover = y
+		self.x_rover,self.y_rover = ll2xy(msg.latitud,msg.longitude,self.orglat,self.orglong)
+
 
 	def set_origin(orglat,orglong):
 		self.orglat = orglat
 		self.orglong = orglong
+
+	def set_target_coordinates(self,latitude,longitude):
+		self.target_latitude=latitud
+		self.target_longitude=longitude
