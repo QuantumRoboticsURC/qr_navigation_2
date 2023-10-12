@@ -69,7 +69,7 @@ class FollowGPS(Node):
 		control = distance
 		
 		while(distance>0):
-			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
+			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
 			self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
 			self.cmd_vel.publish(self.twist)
 
