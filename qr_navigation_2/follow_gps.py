@@ -51,7 +51,7 @@ class FollowGPS(Node):
 	def follow(self):
 		
 		x,y = ll2xy(self.gps_coordinates[0],self.gps_coordinates[1],self.orglat,self.orglong,)
-		target_angle = (np.atan2(self.y,self.x)+2*math.pi)%2*math.pi
+		target_angle = (np.arctan2(self.y,self.x)+2*math.pi)%2*math.pi
 		
 		if(self.angle>target_angle):
 			while(self.angle>target_angleangle):
