@@ -5,13 +5,14 @@ from rclpy import Node
 from .submodules.alvinxy import *
 import numpy
 import math 
+from custom_interfaces.srv import FollowGPS
 
 class FollowGPS(Node):
 	def __init__(self):
 		super().__init__('follow_gps')
 		#Probably will be replaced for a service 
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
-		self.timer = self.create_timer(0.5,self.follow)
+		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
 		self.my_rover_position = self.create_subscription(NavSatFix,'gps',self.update_position,10)
 		self.my_rover_angle = self.create_subscription(Imu,'Imu',self.update_angle,10)
 		self.twist = Twist()
@@ -48,13 +49,12 @@ class FollowGPS(Node):
 	     
 	        return roll_x, pitch_y, yaw_z # in radians
 
-	def follow(self):
+	def FollowGPS_callback(self,request,response):
 		
-		x,y = ll2xy(self.target_latitude,self.target_longitude,self.orglat,self.orglong,)
+		x,y = ll2xy(request.latitude,request.longitude,self.orglat,self.orglong)
 		target_angle = (np.arctan2(self.y,self.x)+2*math.pi)%2*math.pi
-		
 		if(self.angle>target_angle):
-			while(self.angle>target_angleangle):
+			while(self.angle>target_angle):
 				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
 		else:
@@ -75,6 +75,8 @@ class FollowGPS(Node):
 
 		self.twist.linear.x = 0.0
 		self.cmd_vel.publish(self.twist)
+		self.orglong = self.gps_coordinates[1]
+		self.orglat = self.gps_coordinates[0]
 
 	def update_angle(self,msg):
 		quat = Quaternion()
