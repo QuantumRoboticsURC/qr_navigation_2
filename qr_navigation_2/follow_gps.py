@@ -1,4 +1,4 @@
-import rclcpy
+import rclpy
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
 from rclpy import Node 
@@ -23,8 +23,6 @@ class FollowGPS(Node):
 
 		self.orglong = 0.0
 		self.orglat = 0.0
-		self.target_latitude = 0.0
-		self.target_longitude = 0.0
 
 		self.linear_velocity = 0.33
 		self.angular_velocity = 0.2
@@ -96,3 +94,13 @@ class FollowGPS(Node):
 	def set_target_coordinates(self,latitude,longitude):
 		self.target_latitude=latitude
 		self.target_longitude=longitude
+
+def main(args=None):
+    gps = FollowGPS()
+    rclpy.init(args=args)
+    rclpy.spin(gps)
+    rclpy.shutdown()
+    
+if __name__=="__main__":
+    main()
+    
