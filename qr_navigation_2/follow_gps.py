@@ -33,7 +33,7 @@ class FollowGPS(Node):
 	def FollowGPS_callback(self,request,response):
 		
 		x,y = ll2xy(request.latitude,request.longitude,self.orglat,self.orglong)
-		target_angle = (np.arctan2(self.y,self.x)+2*math.pi)%2*math.pi
+		target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
 		if(self.angle>target_angle):
 			while(self.angle>target_angle):
 				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
@@ -59,6 +59,7 @@ class FollowGPS(Node):
 		self.orglong = self.gps_coordinates[1]
 		self.orglat = self.gps_coordinates[0]
 		response.arrived = True 
+  
 		return response
 
 	def euler_from_quaternion(self,x, y, z, w):
@@ -78,7 +79,8 @@ class FollowGPS(Node):
 		quat = Quaternion()
 		quat = msg.orientation
 		angle_x,angle_y,angle_z = self.euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-		self.angle = angle_z
+		self.angle = (np.arctan2(angle_z)+2*math.pi)%2*math.pi
+  
 
 
 	def update_position(self,msg):
@@ -87,7 +89,7 @@ class FollowGPS(Node):
 		self.x_rover,self.y_rover = ll2xy(msg.latitude,msg.longitude,self.orglat,self.orglong)
 
 
-	def set_origin(orglat,orglong):
+	def set_origin(self,orglat,orglong):
 		self.orglat = orglat
 		self.orglong = orglong
 
