@@ -3,6 +3,7 @@ from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
 from rclpy import Node 
 from .submodules.alvinxy import *
+from ublox_msgs.msg import UBXNavHPPosLLH
 import numpy
 import math 
 from custom_interfaces.srv import FollowGPS
@@ -13,7 +14,7 @@ class FollowGPS(Node):
 		#Probably will be replaced for a service 
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
 		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
-		self.my_rover_position = self.create_subscription(NavSatFix,'gps',self.update_position,10)
+		self.my_rover_position = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_position,10)
 		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
 		self.twist = Twist()
 
