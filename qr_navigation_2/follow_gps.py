@@ -14,7 +14,7 @@ class FollowGPS(Node):
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
 		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
 		self.my_rover_position = self.create_subscription(NavSatFix,'gps',self.update_position,10)
-		self.my_rover_angle = self.create_subscription(Imu,'Imu',self.update_angle,10)
+		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
 		self.twist = Twist()
 
 		self.gps_coordinates = [0.0,0.0]
