@@ -58,7 +58,7 @@ class FollowGPS(Node):
 		self.orglong = self.gps_coordinates[1]
 		self.orglat = self.gps_coordinates[0]
 		response.arrived = True 
-  
+
 		return response
 
 	def euler_from_quaternion(self,x, y, z, w):
