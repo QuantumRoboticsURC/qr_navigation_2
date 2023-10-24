@@ -6,15 +6,17 @@
   <description>TODO: Package description</description>
   <maintainer email="iker@todo.todo">iker</maintainer>
   <license>TODO: License declaration</license>
+
   <buildtool_depend>ament_python</buildtool_depend>
+
   <depend>std_msgs</depend>
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>custom_interfaces</depend>
+
   <exec_depend>ublox_ubx_msgs</exec_depend>
-  <exec_depend>msg</exec_depend>
   <exec_depend>ublox_ubx_interfaces</exec_depend>
   <exec_depend>ublox_dgnss_node</exec_depend>
   <exec_depend>ublox_dgnss</exec_depend>

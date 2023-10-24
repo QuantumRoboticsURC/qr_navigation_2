@@ -7,14 +7,21 @@ from ublox_msgs.msg import UBXNavHPPosLLH
 import numpy
 import math 
 from custom_interfaces.srv import FollowGPS
+from std_msgs.msg import Float64
+from rclpy.qos import *
+
+
 
 class FollowGPS(Node):
 	def __init__(self):
 		super().__init__('follow_gps')
 		#Probably will be replaced for a service 
+
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
 		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
-		self.my_rover_position = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_position,10)
+
+        self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
+		
 		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
 		self.twist = Twist()
 
@@ -27,8 +34,28 @@ class FollowGPS(Node):
 
 		self.linear_velocity = 0.33
 		self.angular_velocity = 0.2
+		self.HAS_STARTED = True
 
 
+	def update_position(self):
+		self.x_rover,self.y_rover = ll2xy(self.gps_coordinates[0] ,self.gps_coordinates[1] ,self.orglat,self.orglong)
+
+	def update_coords(self,data):
+		if(self.HAS_STARTED):
+			self.orglong = data.lon/(10000000)
+			self.orglat = data.lat/(10000000)
+			self.HAS_STARTED = False
+		self.gps_coordinates[0]=data.lat/(10000000)
+		self.gps_coordinates[1]=data.lon/(10000000)
+		if(not self.HAS_STARTED):
+			self.update_position()
+	
+	def update_angle(self,msg):
+		quat = Quaternion()
+		quat = msg.orientation
+		angle_x,angle_y,angle_z = self.euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
+		self.angle = (np.arctan2(angle_z)+2*math.pi)%2*math.pi
+  
 	def FollowGPS_callback(self,request,response):
 		
 		x,y = ll2xy(request.latitude,request.longitude,self.orglat,self.orglong)
@@ -74,19 +101,6 @@ class FollowGPS(Node):
 		yaw_z = math.atan2(t3, t4)
 		return roll_x, pitch_y, yaw_z # in radians
 	
-	def update_angle(self,msg):
-		quat = Quaternion()
-		quat = msg.orientation
-		angle_x,angle_y,angle_z = self.euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-		self.angle = (np.arctan2(angle_z)+2*math.pi)%2*math.pi
-  
-
-
-	def update_position(self,msg):
-		self.gps_coordinates[0] = msg.latitude
-		self.gps_coordinates[1] = msg.longitude
-		self.x_rover,self.y_rover = ll2xy(msg.latitude,msg.longitude,self.orglat,self.orglong)
-
 
 	def set_origin(self,orglat,orglong):
 		self.orglat = orglat
