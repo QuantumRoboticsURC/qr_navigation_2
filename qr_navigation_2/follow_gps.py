@@ -1,14 +1,16 @@
 import rclpy
+from rclpy.node import Node
+from rclpy.qos import *
+from .submodules.alvinxy import *
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
-from rclpy import Node 
-from .submodules.alvinxy import *
-from ublox_msgs.msg import UBXNavHPPosLLH
-import numpy
-import math 
+from ublox_ubx_msgs.msg import UBXNavHPPosLLH
 from custom_interfaces.srv import FollowGPS
 from std_msgs.msg import Float64
-from rclpy.qos import *
+import numpy
+import math 
+
+
 
 def euler_from_quaternion(self,x, y, z, w):
 	t0 = +2.0 * (w * x + y * z)
@@ -23,33 +25,30 @@ def euler_from_quaternion(self,x, y, z, w):
 	yaw_z = math.atan2(t3, t4)
 	return roll_x, pitch_y, yaw_z # in radians
 
-class FollowGPS(Node):
+class Follow_GPS(Node):
 	def __init__(self):
-		super().__init__('follow_gps')
+		super().__init__('go_to_gps')
 		#Probably will be replaced for a service 
-
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
 		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
-
-        self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
+		
+		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
 		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
 		
 		self.twist = Twist()
 		self.linear_velocity = 0.33
 		self.angular_velocity = 0.2
-
+		
 		self.gps_coordinates = [0.0,0.0]
 		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
 		self.orglong = 0.0
 		self.orglat = 0.0
-
-
 		self.HAS_STARTED = True
 
 
 	def update_position(self):
 		self.x_rover,self.y_rover = ll2xy(self.gps_coordinates[0] ,self.gps_coordinates[1] ,self.orglat,self.orglong)
-
+	
 	def update_coords(self,data):
 		if(self.HAS_STARTED):
 			self.orglong = data.lon/(10000000)
@@ -59,7 +58,7 @@ class FollowGPS(Node):
 		self.gps_coordinates[1]=data.lon/(10000000)
 		if(not self.HAS_STARTED):
 			self.update_position()
-	
+
 	def update_angle(self,msg):
 		quat = Quaternion()
 		quat = msg.orientation
@@ -105,10 +104,12 @@ class FollowGPS(Node):
 
 
 def main(args=None):
-    gps = FollowGPS()
-    rclpy.init(args=args)
-    rclpy.spin(gps)
-    rclpy.shutdown()
+	rclpy.init(args=args)
+	gps = Follow_GPS()
+	rclpy.spin(gps)
+	gps.destroy_node()
+	rclpy.shutdown()
+
     
 if __name__=="__main__":
     main()
