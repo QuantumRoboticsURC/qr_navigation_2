@@ -1,0 +1,29 @@
+[2.397s] Invoking command in '/home/shikur_orin/ros2_ws/src/qr_navigation_2': PYTHONPATH=/home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/prefix_override:/home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base build/qr_navigation_2 build --build-base /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build install --record /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/install.log --install-scripts $base/lib/qr_navigation_2 --single-version-externally-managed
+[2.867s] running egg_info
+[2.868s] writing build/qr_navigation_2/qr_navigation_2.egg-info/PKG-INFO
+[2.868s] writing dependency_links to build/qr_navigation_2/qr_navigation_2.egg-info/dependency_links.txt
+[2.869s] writing entry points to build/qr_navigation_2/qr_navigation_2.egg-info/entry_points.txt
+[2.869s] writing requirements to build/qr_navigation_2/qr_navigation_2.egg-info/requires.txt
+[2.869s] writing top-level names to build/qr_navigation_2/qr_navigation_2.egg-info/top_level.txt
+[2.934s] reading manifest file 'build/qr_navigation_2/qr_navigation_2.egg-info/SOURCES.txt'
+[2.935s] writing manifest file 'build/qr_navigation_2/qr_navigation_2.egg-info/SOURCES.txt'
+[2.936s] running build
+[2.936s] running build_py
+[2.936s] copying qr_navigation_2/test_qos.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2
+[2.937s] running install
+[2.939s] running install_lib
+[2.941s] copying /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/test_qos.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2
+[2.943s] byte-compiling /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/follow_gps.py to follow_gps.cpython-38.pyc
+[2.945s] Sorry: TabError: inconsistent use of tabs and spaces in indentation (follow_gps.py, line 23)
+[2.945s] byte-compiling /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/test_qos.py to test_qos.cpython-38.pyc
+[2.946s] running install_data
+[2.947s] running install_egg_info
+[2.951s] removing '/home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2-0.0.0-py3.8.egg-info' (and everything under it)
+[2.951s] Copying build/qr_navigation_2/qr_navigation_2.egg-info to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2-0.0.0-py3.8.egg-info
+[2.953s] running install_scripts
+[2.989s] Installing followGPS script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+[2.990s] Installing pub script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+[2.990s] Installing qos script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+[2.991s] Installing test_gps script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+[2.991s] writing list of installed files to '/home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/install.log'
+[3.049s] Invoked command in '/home/shikur_orin/ros2_ws/src/qr_navigation_2' returned '0': PYTHONPATH=/home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/prefix_override:/home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base build/qr_navigation_2 build --build-base /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build install --record /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/install.log --install-scripts $base/lib/qr_navigation_2 --single-version-externally-managed

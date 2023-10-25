@@ -1,0 +1,35 @@
+running egg_info
+writing build/qr_navigation_2/qr_navigation_2.egg-info/PKG-INFO
+writing dependency_links to build/qr_navigation_2/qr_navigation_2.egg-info/dependency_links.txt
+writing entry points to build/qr_navigation_2/qr_navigation_2.egg-info/entry_points.txt
+writing requirements to build/qr_navigation_2/qr_navigation_2.egg-info/requires.txt
+writing top-level names to build/qr_navigation_2/qr_navigation_2.egg-info/top_level.txt
+reading manifest file 'build/qr_navigation_2/qr_navigation_2.egg-info/SOURCES.txt'
+writing manifest file 'build/qr_navigation_2/qr_navigation_2.egg-info/SOURCES.txt'
+running build
+running build_py
+copying qr_navigation_2/test_qos.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2
+creating /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/submodules
+copying qr_navigation_2/submodules/alvinxy.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/submodules
+copying qr_navigation_2/submodules/__init__.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/submodules
+running install
+running install_lib
+creating /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/submodules
+copying /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/submodules/alvinxy.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/submodules
+copying /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/submodules/__init__.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/submodules
+copying /home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/build/lib/qr_navigation_2/test_qos.py -> /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2
+byte-compiling /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/follow_gps.py to follow_gps.cpython-38.pyc
+Sorry: TabError: inconsistent use of tabs and spaces in indentation (follow_gps.py, line 23)
+byte-compiling /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/submodules/alvinxy.py to alvinxy.cpython-38.pyc
+byte-compiling /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/submodules/__init__.py to __init__.cpython-38.pyc
+byte-compiling /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2/test_qos.py to test_qos.cpython-38.pyc
+running install_data
+running install_egg_info
+removing '/home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2-0.0.0-py3.8.egg-info' (and everything under it)
+Copying build/qr_navigation_2/qr_navigation_2.egg-info to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/python3.8/site-packages/qr_navigation_2-0.0.0-py3.8.egg-info
+running install_scripts
+Installing followGPS script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+Installing pub script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+Installing qos script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+Installing test_gps script to /home/shikur_orin/ros2_ws/src/qr_navigation_2/install/qr_navigation_2/lib/qr_navigation_2
+writing list of installed files to '/home/shikur_orin/ros2_ws/src/qr_navigation_2/build/qr_navigation_2/install.log'

@@ -10,18 +10,7 @@ from custom_interfaces.srv import FollowGPS
 from std_msgs.msg import Float64
 from rclpy.qos import *
 
-def euler_from_quaternion(self,x, y, z, w):
-	t0 = +2.0 * (w * x + y * z)
-	t1 = +1.0 - 2.0 * (x * x + y * y)
-	roll_x = math.atan2(t0, t1)
-	t2 = +2.0 * (w * y - z * x)
-	t2 = +1.0 if t2 > +1.0 else t2
-	t2 = -1.0 if t2 < -1.0 else t2
-	pitch_y = math.asin(t2)
-	t3 = +2.0 * (w * z + x * y)
-	t4 = +1.0 - 2.0 * (y * y + z * z)
-	yaw_z = math.atan2(t3, t4)
-	return roll_x, pitch_y, yaw_z # in radians
+
 
 class FollowGPS(Node):
 	def __init__(self):
@@ -32,18 +21,19 @@ class FollowGPS(Node):
 		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
 
         self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
-		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
 		
+		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
 		self.twist = Twist()
-		self.linear_velocity = 0.33
-		self.angular_velocity = 0.2
 
 		self.gps_coordinates = [0.0,0.0]
+		self.rover_orientation = [0.0,0.0,0.0]
 		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
+
 		self.orglong = 0.0
 		self.orglat = 0.0
 
-
+		self.linear_velocity = 0.33
+		self.angular_velocity = 0.2
 		self.HAS_STARTED = True
 
 
@@ -98,6 +88,18 @@ class FollowGPS(Node):
 
 		return response
 
+	def euler_from_quaternion(self,x, y, z, w):
+		t0 = +2.0 * (w * x + y * z)
+		t1 = +1.0 - 2.0 * (x * x + y * y)
+		roll_x = math.atan2(t0, t1)
+		t2 = +2.0 * (w * y - z * x)
+		t2 = +1.0 if t2 > +1.0 else t2
+		t2 = -1.0 if t2 < -1.0 else t2
+		pitch_y = math.asin(t2)
+		t3 = +2.0 * (w * z + x * y)
+		t4 = +1.0 - 2.0 * (y * y + z * z)
+		yaw_z = math.atan2(t3, t4)
+		return roll_x, pitch_y, yaw_z # in radians
 	
 
 	def set_origin(self,orglat,orglong):

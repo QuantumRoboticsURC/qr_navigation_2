@@ -1,0 +1,6 @@
+[console_scripts]
+followGPS = qr_navigation_2.follow_gps:main
+pub = qr_navigation_2.test_publisher:main
+qos = qr_navigation_2.test_qos:main
+test_gps = qr_navigation_2.test_listener_gps:main
+
