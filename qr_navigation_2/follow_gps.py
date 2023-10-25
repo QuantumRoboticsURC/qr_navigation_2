@@ -64,8 +64,8 @@ class FollowGPS(Node):
 		quat = Quaternion()
 		quat = msg.orientation
 		angle_x,angle_y,angle_z = self.euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-		self.angle = (np.arctan2(angle_z)+2*math.pi)%2*math.pi
-  
+		self.angle = (angle_z+2*math.pi)%2*math.pi
+
 	def FollowGPS_callback(self,request,response):
 		
 		x,y = ll2xy(request.latitude,request.longitude,self.orglat,self.orglong)
