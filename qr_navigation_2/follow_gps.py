@@ -98,15 +98,11 @@ class FollowGPS(Node):
 
 		return response
 
-	
 
 	def set_origin(self,orglat,orglong):
 		self.orglat = orglat
 		self.orglong = orglong
 
-	def set_target_coordinates(self,latitude,longitude):
-		self.target_latitude=latitude
-		self.target_longitude=longitude
 
 def main(args=None):
     gps = FollowGPS()
