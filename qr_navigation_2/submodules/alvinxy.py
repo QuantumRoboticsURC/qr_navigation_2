@@ -18,7 +18,7 @@ def  mdeglat(lat):
     Returns:
       float: meters-per-degree value
     '''
-    latrad = lat*2.0*pi/360.0 ;
+    latrad = lat*2.0*pi/360.0
 
     dy = 111132.09 - 566.05 * cos(2.0*latrad) \
          + 1.20 * cos(4.0*latrad) \
@@ -57,8 +57,8 @@ def ll2xy(lat, lon, orglat, orglon):
         x is Easting in m (Alvin local grid)
         y is Northing in m (Alvin local grid)
     '''
-    x = (lon - orglon) * mdeglon(orglat);
-    y = (lat - orglat) * mdeglat(orglat);
+    x = (lon - orglon) * mdeglon(orglat)
+    y = (lat - orglat) * mdeglat(orglat)
     return x,y
 
 

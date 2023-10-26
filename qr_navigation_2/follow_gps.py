@@ -12,7 +12,7 @@ import math
 
 
 
-def euler_from_quaternion(self,x, y, z, w):
+def euler_from_quaternion(x, y, z, w):
 	t0 = +2.0 * (w * x + y * z)
 	t1 = +1.0 - 2.0 * (x * x + y * y)
 	roll_x = math.atan2(t0, t1)
@@ -33,8 +33,7 @@ class Follow_GPS(Node):
 		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
 		
 		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
-		self.my_rover_angle = self.create_subscription(Imu,'imu',self.update_angle,10)
-		
+		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10)    
 		self.twist = Twist()
 		self.linear_velocity = 0.33
 		self.angular_velocity = 0.2
@@ -58,12 +57,14 @@ class Follow_GPS(Node):
 		self.gps_coordinates[1]=data.lon/(10000000)
 		if(not self.HAS_STARTED):
 			self.update_position()
+		print(f"coordinates: {self.gps_coordinates}")
 
 	def update_angle(self,msg):
 		quat = Quaternion()
 		quat = msg.orientation
-		angle_x,angle_y,angle_z = self.euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
+		angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
 		self.angle = (angle_z+2*math.pi)%2*math.pi
+		print(f"Angle: {self.angle}")
 
 	def FollowGPS_callback(self,request,response):
 		
