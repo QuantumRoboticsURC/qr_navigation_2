@@ -43,6 +43,7 @@ class Follow_GPS(Node):
 		self.orglong = 0.0
 		self.orglat = 0.0
 		self.HAS_STARTED = True
+		#self.timer = self.create_timer(0.01,self.followGPS2)
 
 
 	def update_position(self):
@@ -67,15 +68,52 @@ class Follow_GPS(Node):
 		print(f"Angle: {self.angle}")
 
 	def FollowGPS_callback(self,request,response):
-		
+		print(f"target: {request.latitude}")
+		print(f"Enter node: {self.gps_coordinates}")
 		x,y = ll2xy(request.latitude,request.longitude,self.orglat,self.orglong)
 		target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
 		if(self.angle>target_angle):
 			while(self.angle>target_angle):
+				print(f"coordinates1: {self.gps_coordinates}")
+				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+				self.cmd_vel.publish(self.twist)
+				rclpy.spin()
+		else:
+			while(self.angle<target_angle):
+				print(f"coordinates2: {self.gps_coordinates}")
+				self.twist.angular.z = (abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+				self.cmd_vel.publish(self.twist)
+				rclpy.spin()
+		
+		self.twist.angular.z=0.0
+		self.cmd_vel.publish(self.twist)
+
+		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
+		control = distance
+		
+		while(distance>0):
+			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
+			self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
+			self.cmd_vel.publish(self.twist)
+
+		self.twist.linear.x = 0.0
+		self.cmd_vel.publish(self.twist)
+		response.arrived = True 
+
+		return response
+
+	def followGPS2(self):
+
+		x,y = ll2xy(19.5896,99.23453,self.orglat,self.orglong)
+		target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
+		if(self.angle>target_angle):
+			while(self.angle>target_angle):
+				print("Moving")
 				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
 		else:
 			while(self.angle<target_angle):
+				print("moving")
 				self.twist.angular.z = (abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
 		
@@ -92,16 +130,10 @@ class Follow_GPS(Node):
 
 		self.twist.linear.x = 0.0
 		self.cmd_vel.publish(self.twist)
-		self.orglong = self.gps_coordinates[1]
-		self.orglat = self.gps_coordinates[0]
 		response.arrived = True 
 
 		return response
 
-
-	def set_origin(self,orglat,orglong):
-		self.orglat = orglat
-		self.orglong = orglong
 
 
 def main(args=None):
