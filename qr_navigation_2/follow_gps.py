@@ -4,6 +4,7 @@ from rclpy.qos import *
 from .submodules.alvinxy import *
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
+from std_msgs.msg import Int8,Bool
 from ublox_ubx_msgs.msg import UBXNavHPPosLLH
 from custom_interfaces.srv import FollowGPS
 from std_msgs.msg import Float64
@@ -29,11 +30,13 @@ class Follow_GPS(Node):
 	def __init__(self):
 		super().__init__('go_to_gps')
 		#Probably will be replaced for a service 
-		self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
-		self.srv = self.create_service(FollowGPS, 'follow_gps', self.FollowGPS_callback)
-		
+		self.cmd_vel = self.create_publisher(Twist,'cmd_vel_fg',10)
+		self.arrived_pub = self.create_publisher(Bool,'arrived_fg',1)
+		self.state_pub = self.create_publisher(Int8,'/state',10)
 		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
 		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10)    
+		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state)
+
 		self.twist = Twist()
 		self.linear_velocity = 0.33
 		self.angular_velocity = 0.2
@@ -43,7 +46,9 @@ class Follow_GPS(Node):
 		self.orglong = 0.0
 		self.orglat = 0.0
 		self.HAS_STARTED = True
-		#self.timer = self.create_timer(0.01,self.followGPS2)
+		self.state=-1
+		self.timer = self.create_timer(0.01,self.followGPS2)
+		
 
 
 	def update_position(self):
@@ -59,7 +64,9 @@ class Follow_GPS(Node):
 		if(not self.HAS_STARTED):
 			self.update_position()
 		print(f"coordinates: {self.gps_coordinates}")
-
+	def update_state(self,msg):
+		self.state=msg.data
+		
 	def update_angle(self,msg):
 		quat = Quaternion()
 		quat = msg.orientation
@@ -67,73 +74,39 @@ class Follow_GPS(Node):
 		self.angle = (angle_z+2*math.pi)%2*math.pi
 		print(f"Angle: {self.angle}")
 
-	def FollowGPS_callback(self,request,response):
-		print(f"target: {request.latitude}")
-		print(f"Enter node: {self.gps_coordinates}")
-		x,y = ll2xy(request.latitude,request.longitude,self.orglat,self.orglong)
-		target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
-		if(self.angle>target_angle):
-			while(self.angle>target_angle):
-				print(f"coordinates1: {self.gps_coordinates}")
-				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-				self.cmd_vel.publish(self.twist)
-				rclpy.spin()
-		else:
-			while(self.angle<target_angle):
-				print(f"coordinates2: {self.gps_coordinates}")
-				self.twist.angular.z = (abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-				self.cmd_vel.publish(self.twist)
-				rclpy.spin()
-		
-		self.twist.angular.z=0.0
-		self.cmd_vel.publish(self.twist)
-
-		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
-		control = distance
-		
-		while(distance>0):
-			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
-			self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
-			self.cmd_vel.publish(self.twist)
-
-		self.twist.linear.x = 0.0
-		self.cmd_vel.publish(self.twist)
-		response.arrived = True 
-
-		return response
-
 	def followGPS2(self):
+		if(self.state==0):
+			x,y = ll2xy(19.5896,99.23453,self.orglat,self.orglong)
+			target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
+			if(self.angle>target_angle):
+				while(self.angle>target_angle):
 
-		x,y = ll2xy(19.5896,99.23453,self.orglat,self.orglong)
-		target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
-		if(self.angle>target_angle):
-			while(self.angle>target_angle):
-				print("Moving")
-				self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-				self.cmd_vel.publish(self.twist)
-		else:
-			while(self.angle<target_angle):
-				print("moving")
-				self.twist.angular.z = (abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-				self.cmd_vel.publish(self.twist)
-		
-		self.twist.angular.z=0.0
-		self.cmd_vel.publish(self.twist)
-
-		distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
-		control = distance
-		
-		while(distance>0):
-			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
-			self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
+					self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+					self.cmd_vel.publish(self.twist)
+			else:
+				while(self.angle<target_angle):
+					self.twist.angular.z = (abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+					self.cmd_vel.publish(self.twist)
+			
+			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
 
-		self.twist.linear.x = 0.0
-		self.cmd_vel.publish(self.twist)
-		response.arrived = True 
+			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
+			control = distance
+			
+			while(distance>0):
+				distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
+				self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
+				self.cmd_vel.publish(self.twist)
 
-		return response
-
+			self.twist.linear.x = 0.0
+			self.cmd_vel.publish(self.twist)
+			arrived = Bool()
+			arrived.data=True
+			state = Int8()
+			state.data = -1
+			self.arrived_pub.publish(arrived)
+			self.state_pub.publish(state)
 
 
 def main(args=None):
