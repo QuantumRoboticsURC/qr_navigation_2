@@ -11,6 +11,7 @@ from custom_interfaces.msg import TargetCoordinates
 from std_msgs.msg import Float64
 import numpy
 import math 
+import time 
 
 
 
@@ -49,7 +50,7 @@ class Follow_GPS(Node):
 		self.orglong = 0.0
 		self.orglat = 0.0
 		self.HAS_STARTED = True
-		self.state=-1
+		self.state = -1
 		self.timer = self.create_timer(0.01,self.followGPS2)
 		
 
@@ -85,9 +86,10 @@ class Follow_GPS(Node):
 		if(self.state==0):
 			state = Int8()
 			arrived = Bool()
+			
 			x,y = ll2xy(self.target_coordinates[0],self.target_coordinates[1],self.orglat,self.orglong)
-   
 			target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
+			
 			if(self.angle>target_angle):
 				while(self.angle>target_angle):
 
@@ -100,7 +102,6 @@ class Follow_GPS(Node):
 			
 			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
-
 			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
 			control = distance
 			
@@ -110,12 +111,15 @@ class Follow_GPS(Node):
 				self.cmd_vel.publish(self.twist)
 
 			self.twist.linear.x = 0.0
-   
-			self.cmd_vel.publish(self.twist)
 			arrived.data=True
 			state.data = -1
+
 			self.arrived_pub.publish(arrived)
 			self.state_pub.publish(state)
+			self.cmd_vel.publish(self.twist)
+   
+			time.sleep(1)
+   
 
 
 def main(args=None):
