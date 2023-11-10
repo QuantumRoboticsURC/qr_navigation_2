@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool, Int32
+from std_msgs.msg import Bool, Int32,Int8
 from geometry_msgs.msg import Twist
 
 class NodeController(Node):
@@ -24,7 +24,12 @@ class NodeController(Node):
         # Variables de estado porque si no me pierdo :c
         self.arrived = False
         self.cmd_vel = Twist()
-        self.state = Int32()
+        self.state = Int8()
+        
+        #Containers
+        self.parameters = {0:"gps_only",1:"gps_aruco",2:"gps_hammer",3:"gps_bottle"}
+        self.target_function = ""
+        self.timer = self.create_timer(0.01,self.controller)
 
     # Callbacks para los tópicos suscritos
     def cmd_vel_ca_callback(self, msg):
@@ -36,6 +41,8 @@ class NodeController(Node):
         self.check_arrived(msg)
 
     def target_type_callback(self, msg):
+        self.target_function = self.parameters.get(msg.data,"") 
+        '''
         if msg.data == 0:
             self.state.data = 0
             self.pub_state.publish(self.state)
@@ -45,6 +52,7 @@ class NodeController(Node):
         elif msg.data in [2, 3] and not self.arrived:
             self.state.data = 3 if msg.data == 2 else 2
             self.pub_state.publish(self.state)
+            '''
 
     def cmd_vel_fg_callback(self, msg):
         if self.state.data == 0:
@@ -70,7 +78,22 @@ class NodeController(Node):
             self.pub_arrived.publish(arrived_msg)
         else:
             self.arrived = False
-
+    def controller(self):
+        if(self.target_function=="gps_only"):
+            self.state.data = 0
+            self.pub_state(self.state)
+        elif(self.target_function=="gps_aruco"):
+            self.state.data = 0
+            self.pub_state(self.state)
+            while(not self.arrived):
+                pass
+            self.arrived=False
+            self.state.data = 4
+            self.pub_state(self.state)
+            
+            
+            
+        pass
 def main(args=None):
     rclpy.init(args=args)
     node_controller = NodeController()
