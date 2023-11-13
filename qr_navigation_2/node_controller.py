@@ -79,19 +79,32 @@ class NodeController(Node):
         else:
             self.arrived = False
     def controller(self):
-        if(self.target_function=="gps_only"):
+        if(self.target_function == "gps_only"):
             self.state.data = 0
-            self.pub_state(self.state)
-        elif(self.target_function=="gps_aruco"):
+            self.pub_state.publish(self.state)
+
+        elif(self.target_function == "gps_aruco"):
             self.state.data = 0
-            self.pub_state(self.state)
+            self.pub_state.publish(self.state)
             while(not self.arrived):
                 pass
-            self.arrived=False
+            self.arrived = False
             self.state.data = 4
-            self.pub_state(self.state)
-            
-            
+            self.pub_state.publish(self.state)
+
+        elif(self.target_function == "gps_hammer"):
+            self.state.data = 3
+            self.pub_state.publish(self.state)
+            while(not self.arrived):
+                pass
+            self.arrived = False
+
+        elif(self.target_function == "gps_bottle"):
+            self.state.data = 2
+            self.pub_state.publish(self.state)
+            while(not self.arrived):
+                pass
+            self.arrived = False
             
         pass
 def main(args=None):
@@ -103,3 +116,7 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+
+
+
