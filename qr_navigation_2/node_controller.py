@@ -8,6 +8,7 @@ class NodeController(Node):
         super().__init__('node_controller')
 
         # Suscripciones
+    
         self.create_subscription(Twist, 'cmd_vel_ca', self.cmd_vel_ca_callback, 10)
         self.create_subscription(Bool, 'arrived_ca', self.arrived_ca_callback, 10)
         self.create_subscription(Int32, 'target_type', self.target_type_callback, 10)
@@ -15,23 +16,30 @@ class NodeController(Node):
         self.create_subscription(Bool, 'arrived_fg', self.arrived_fg_callback, 10)
         self.create_subscription(Bool, 'arrived_sr', self.arrived_sr_callback, 10)
         self.create_subscription(Twist, 'cmd_vel_sr', self.cmd_vel_sr_callback, 10)
+        self.create_subscription(Bool,'/go',self.go_start,10)
 
         # Publicadores
         self.pub_arrived = self.create_publisher(Bool, 'arrived', 10)
         self.pub_cmd_vel = self.create_publisher(Twist, 'cmd_vel', 10)
         self.pub_state = self.create_publisher(Int32, 'state', 10)
+        self.pub_go = self.create_publisher(Bool,'/go',10)
 
         # Variables de estado porque si no me pierdo :c
         self.arrived = False
         self.cmd_vel = Twist()
         self.state = Int8()
+        self.start = False
         
         #Containers
         self.parameters = {0:"gps_only",1:"gps_aruco",2:"gps_hammer",3:"gps_bottle"}
         self.target_function = ""
         self.timer = self.create_timer(0.01,self.controller)
+        
 
     # Callbacks para los tópicos suscritos
+    def go_start(self,msg):
+        self.start=msg.data
+        
     def cmd_vel_ca_callback(self, msg):
         if self.arrived:
             self.cmd_vel = msg
@@ -79,21 +87,50 @@ class NodeController(Node):
         else:
             self.arrived = False
     def controller(self):
-        if(self.target_function=="gps_only"):
-            self.state.data = 0
-            self.pub_state(self.state)
-        elif(self.target_function=="gps_aruco"):
-            self.state.data = 0
-            self.pub_state(self.state)
-            while(not self.arrived):
-                pass
-            self.arrived=False
-            self.state.data = 4
-            self.pub_state(self.state)
-            
-            
-            
-        pass
+        if(self.start):
+            if(self.target_function=="gps_only"):
+                self.state.data = 0
+                self.pub_state(self.state)
+                self.has_started = True
+                while(not self.arrived):
+                    pass
+                
+            elif(self.target_function == "gps_aruco"):
+                self.state.data = 0
+                self.pub_state.publish(self.state)
+                while(not self.arrived):
+                    pass
+                self.arrived = False
+                self.state.data = 4
+                self.pub_state.publish(self.state)
+                while (not self.arrived):
+                    pass
+                
+            elif(self.target_function == "gps_hammer"):
+                self.state.data = 0
+                self.pub_state.publish(self.state)
+                while(not self.arrived):
+                    pass
+                
+                self.arrived = False
+                self.state.data = 3
+                self.pub_state.publish(self.state)
+                while (not self.arrived):
+                    pass
+
+            elif(self.target_function == "gps_bottle"):
+                self.state.data = 0
+                self.pub_state.publish(self.state)
+                while(not self.arrived):
+                    pass
+                self.arrived = False
+                self.state.data = 2
+                while (not self.arrived):
+                    pass 
+        started = Bool()
+        started.data=False
+        self.pub_go.publish(started)
+        
 def main(args=None):
     rclpy.init(args=args)
     node_controller = NodeController()
