@@ -94,7 +94,7 @@ image_ocv = image.get_data()
 depth_ocv = image.get_data()
 mirror_ref = sl.Transform()
 mirror_ref.set_translation(sl.Translation(2.75,4.0,0))
-
+distance=0
 while True:
 	if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 		# Retrieve left image
@@ -107,25 +107,26 @@ while True:
 		zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
   
 		grayimg = cv2.cvtColor(image_ocv, cv2.COLOR_BGR2GRAY)
-		grayimgD = cv2.cvtColor(depth_ocv, cv2.COLOR_BGR2GRAY)
-		corners, ids, rejected = cv2.aruco.detectMarkers(grayimgD, arucoDict, parameters=arucoParams)
-
+		#grayimgD = cv2.cvtColor(depth_ocv, cv2.COLOR_BGR2GRAY)
+		corners, ids, rejected = cv2.aruco.detectMarkers(grayimg, arucoDict, parameters=arucoParams)
 		detected_markers = aruco_display(corners, ids, rejected, image_ocv)
 
-		cv2.imshow("Image", detected_markers)
+  
 		# Get and print distance value in mm at the center of the image
 		# We measure the distance camera - object using Euclidean distance
 		
 		err, point_cloud_value = point_cloud.get_value(x, y)
-
+		#distance = 0
 		if math.isfinite(point_cloud_value[2]):
 			distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 								point_cloud_value[1] * point_cloud_value[1] +
 								point_cloud_value[2] * point_cloud_value[2])
 			print(f"Distance to Camera at {{{x};{y}}}: {distance}")
 		else : 
+      
 			print(f"The distance can not be computed at {{{x},{y}}}")
-
+		cv2.putText(detected_markers, f"Distancia: {distance}", (x, y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+		cv2.imshow("Image", detected_markers)
 	key = cv2.waitKey(1) & 0xFF
 	if key == ord("q"):
 		break

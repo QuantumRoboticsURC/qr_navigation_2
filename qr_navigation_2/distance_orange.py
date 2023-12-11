@@ -33,7 +33,7 @@ point_cloud = sl.Mat()
 
 
 # Inicializar la cámara OpenCV
-cap = cv2.VideoCapture("/dev/video1")
+#cap = cv2.VideoCapture("/dev/video1")
 
 # Crear ventana para controles deslizantes
 cv2.namedWindow('Trackbars')
@@ -49,7 +49,7 @@ cv2.createTrackbar('orangeHighValue', 'Trackbars', 255, 255, lambda x: None)
 thresh = 100
 
 i = 0
-while i < 150:
+while True:
     # Capturar un fotograma del flujo de video ZED
     if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
         zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
@@ -58,8 +58,8 @@ while i < 150:
 
 
         # Capturar un fotograma del flujo de video OpenCV
-        ret, img = cap.read()
-        ret, img2 = cap.read()
+        #ret, img = cap.read()
+        #ret, img2 = cap.read()
 
         # Convertir el fotograma al espacio de color HSV
         frame_hsv = cv2.cvtColor(image_ocv, cv2.COLOR_BGR2HSV)
@@ -90,8 +90,8 @@ while i < 150:
             crp_r1 = y + h + thresh if y + h + thresh < image_size.height else image_size.height
 
             # Obtener la posición 3D del objeto naranja en el punto central
-            x_3d, y_3d, z_3d, _ = point_cloud.get_value(centro_objeto[0], centro_objeto[1])
-
+            err,point_value = point_cloud.get_value(centro_objeto[0], centro_objeto[1])
+            x_3d,y_3d,z_3d,_ = point_value
             # Calcular la distancia euclidiana tridimensional
             distancia_objeto = math.sqrt(x_3d**2 + y_3d**2 + z_3d**2)
 
@@ -105,15 +105,16 @@ while i < 150:
                 print("Centrado")
 
             # Dibujar un rectángulo alrededor del objeto naranja
-            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.rectangle(image_ocv, (x, y), (x + w, y + h), (0, 255, 0), 2)
             # Escribir "Color Naranja" sobre el rectángulo
-            cv2.putText(img, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            cv2.putText(image_ocv, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        cv2.imshow("Image", image_ocv)
 
             # Mostrar el fotograma original con las detecciones y centrado
-            cv2.imshow('Center Stage', img2[crp_r0:crp_r1, crp_c0:crp_c1])
-            cv2.imshow('Camera with Orange Detection', img)
+           # cv2.imshow('Center Stage', img2[crp_r0:crp_r1, crp_c0:crp_c1])
+            #cv2.imshow('Camera with Orange Detection', img)
 
-            i += 1
+        
 
         # Salir del bucle si se presiona la tecla 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
