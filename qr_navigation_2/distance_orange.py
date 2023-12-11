@@ -4,6 +4,9 @@ import pyzed.sl as sl
 import math
 import sys
 
+def nothing(x):
+    pass
+
 # Inicializar la cámara ZED
 zed = sl.Camera()
 init_params = sl.InitParameters()
@@ -30,13 +33,13 @@ cap = cv2.VideoCapture(0)
 # Crear ventana para controles deslizantes
 cv2.namedWindow('Trackbars')
 
-# Crear trackbars para umbrales de color en espacio de color HSV
-cv2.createTrackbar('orangeLowHue', 'Trackbars', 0, 179, lambda x: None)
-cv2.createTrackbar('orangeHighHue', 'Trackbars', 22, 179, lambda x: None)
-cv2.createTrackbar('orangeLowSaturation', 'Trackbars', 130, 255, lambda x: None)
-cv2.createTrackbar('orangeHighSaturation', 'Trackbars', 255, 255, lambda x: None)
-cv2.createTrackbar('orangeLowValue', 'Trackbars', 160, 255, lambda x: None)
-cv2.createTrackbar('orangeHighValue', 'Trackbars', 255, 255, lambda x: None)
+# Crear trackbars para los umbrales de color en el espacio de color HSV
+cv2.createTrackbar('orangeLowHue', 'Trackbars', 0, 179, nothing)
+cv2.createTrackbar('orangeHighHue', 'Trackbars', 22, 179, nothing)
+cv2.createTrackbar('orangeLowSaturation', 'Trackbars', 130, 255, nothing)
+cv2.createTrackbar('orangeHighSaturation', 'Trackbars', 255, 255, nothing)
+cv2.createTrackbar('orangeLowValue', 'Trackbars', 160, 255, nothing)
+cv2.createTrackbar('orangeHighValue', 'Trackbars', 255, 255, nothing)
 
 thresh = 100
 
