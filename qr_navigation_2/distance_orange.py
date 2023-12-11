@@ -4,9 +4,6 @@ import pyzed.sl as sl
 import math
 import sys
 
-def nothing(x):
-    pass
-
 # Inicializar la cámara ZED
 zed = sl.Camera()
 init_params = sl.InitParameters()
@@ -19,27 +16,35 @@ if err != sl.ERROR_CODE.SUCCESS:
     exit(1)
 
 runtime_parameters = sl.RuntimeParameters()
-runtime_parameters.sensing_mode = sl.SENSING_MODE.STANDARD
-runtime_parameters.confidence_threshold = 100
-runtime_parameters.textureness_confidence_threshold = 100
+#runtime_parameters.sensing_mode = sl.SENSING_MODE.STANDARD
+#runtime_parameters.confidence_threshold = 100
+#runtime_parameters.textureness_confidence_threshold = 100
 
-image_size = zed.get_camera_information().camera_resolution
+
+#image_size = zed.get_camera_information().camera_resolution
+image_size = zed.get_camera_information().camera_configuration.resolution
 image_size.width = image_size.width // 2
 image_size.height = image_size.height // 2
 
+image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
+depth_image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
+point_cloud = sl.Mat()
+
+
+
 # Inicializar la cámara OpenCV
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("/dev/video1")
 
 # Crear ventana para controles deslizantes
 cv2.namedWindow('Trackbars')
 
-# Crear trackbars para los umbrales de color en el espacio de color HSV
-cv2.createTrackbar('orangeLowHue', 'Trackbars', 0, 179, nothing)
-cv2.createTrackbar('orangeHighHue', 'Trackbars', 22, 179, nothing)
-cv2.createTrackbar('orangeLowSaturation', 'Trackbars', 130, 255, nothing)
-cv2.createTrackbar('orangeHighSaturation', 'Trackbars', 255, 255, nothing)
-cv2.createTrackbar('orangeLowValue', 'Trackbars', 160, 255, nothing)
-cv2.createTrackbar('orangeHighValue', 'Trackbars', 255, 255, nothing)
+# Crear trackbars para umbrales de color en espacio de color HSV
+cv2.createTrackbar('orangeLowHue', 'Trackbars', 0, 179, lambda x: None)
+cv2.createTrackbar('orangeHighHue', 'Trackbars', 22, 179, lambda x: None)
+cv2.createTrackbar('orangeLowSaturation', 'Trackbars', 130, 255, lambda x: None)
+cv2.createTrackbar('orangeHighSaturation', 'Trackbars', 255, 255, lambda x: None)
+cv2.createTrackbar('orangeLowValue', 'Trackbars', 160, 255, lambda x: None)
+cv2.createTrackbar('orangeHighValue', 'Trackbars', 255, 255, lambda x: None)
 
 thresh = 100
 
@@ -48,14 +53,16 @@ while i < 150:
     # Capturar un fotograma del flujo de video ZED
     if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
         zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
-        image_ocv = zed.retrieve_image(sl.VIEW.LEFT, sl.MEM.CPU, image_size).get_data()
+        #image_ocv = zed.retrieve_image(sl.VIEW.LEFT, sl.MEM.CPU, image_size).get_data()
+        image_ocv = image_zed.get_data()
+
 
         # Capturar un fotograma del flujo de video OpenCV
         ret, img = cap.read()
         ret, img2 = cap.read()
 
         # Convertir el fotograma al espacio de color HSV
-        frame_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        frame_hsv = cv2.cvtColor(image_ocv, cv2.COLOR_BGR2HSV)
 
         # Obtener los valores actuales de los trackbars
         orange_low_hue = cv2.getTrackbarPos('orangeLowHue', 'Trackbars')
