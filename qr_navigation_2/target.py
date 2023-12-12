@@ -18,4 +18,4 @@ class Target(Node):
         
     def main(args=None):
         rclpy.init(args=args)
-        target=Target()
+        target=Target()*
