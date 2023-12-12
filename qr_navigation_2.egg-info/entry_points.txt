@@ -1,0 +1,9 @@
+[console_scripts]
+controller = qr_navigation_2.node_controller:main
+followGPS = qr_navigation_2.follow_gps:main
+imu = qr_navigation_2.test_imu:main
+pub = qr_navigation_2.test_publisher:main
+qos = qr_navigation_2.test_qos:main
+sus = qr_navigation_2.test_subscriber:main
+test_gps = qr_navigation_2.test_listener_gps:main
+web = qr_navigation_2.fake_web:main
