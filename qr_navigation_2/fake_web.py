@@ -1,27 +1,33 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8
+from std_msgs.msg import Int32
 
-class Web(Node):
+class WebNode(Node):
     def __init__(self):
-        super().__init__("Web")
-        self.publish = self.create_publisher(Int8,"state",10)
-        self.timer = self.create_timer(0.01,self.pub)
-        
-    def pub(self):
-        state =Int8()
-        state.data = int(input("Ingrese el valor: "))
-        self.publish.publish(state)
+        super().__init__('web_node')
+        self.publisher_ = self.create_publisher(Int32, 'target_type', 10)
+        self.timer = self.create_timer(2.0, self.request_target_type)
+
+    def request_target_type(self):
+        try:
+            target_type = int(input("Ingrese el tipo de objetivo (0-3): "))
+            if 0 <= target_type <= 3:
+                target_type_msg = Int32()
+                target_type_msg.data = target_type
+                self.publisher_.publish(target_type_msg)
+            else:
+                print("El número ingresado está fuera del rango permitido (0-3). Vuelva a intentarlo.")
+        except ValueError:
+            print("Por favor, ingrese un número entero.")
 
 def main(args=None):
-	rclpy.init(args=args)
-	gps = Web()
-	rclpy.spin(gps)
-	gps.destroy_node()
-	rclpy.shutdown()
+    rclpy.init(args=args)
+    web_node = WebNode()
+    rclpy.spin(web_node)
+    web_node.destroy_node()
+    rclpy.shutdown()
 
-    
-if __name__=="__main__":
+if __name__ == '__main__':
     main()
          
    
