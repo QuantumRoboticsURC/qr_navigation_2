@@ -147,10 +147,23 @@ class Detect(Node):
                                     point_cloud_value[1] * point_cloud_value[1] +
                                     point_cloud_value[2] * point_cloud_value[2])
                 print(f"Distance to Camera at {{{self.x};{self.y}}}: {self.distance}")
+		transform_aruco_midpoint_to_metric_system(point_cloud_value)
             else : 
         
                 print(f"The distance can not be computed at {{{self.x},{self.y}}}")
             cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+def transform_aruco_midpoint_to_metric_system(self, point_cloud_value): 
+   
+        x_m = (0.25738586)*(point_cloud_value[0]) + 0.05862189
+
+        x_px_times_y_px = point_cloud_value[0]*point_cloud_value[1]
+        y_m = 0.29283879*point_cloud_value[0] + 0.00050015*point_cloud_value[1] + 0.00094536*x_px_times_y_px + 0.23096646
+
+        x_px_times_z_px = point_cloud_value[0]*point_cloud_value[2]
+        z_m = 0.16725805*point_cloud_value[0] - 0.00069012*point_cloud_value[2] + 0.00098029*x_px_times_z_px - 0.04520938 
+	self.distance = math.sqrt(x_m+y_m+z_m)
+        print(f"Distance to Camera at: {{{self.x_m};{self.y_m}}}: {self.distance}")
 
 def main(args=None):
 	rclpy.init(args=args)
@@ -161,4 +174,5 @@ def main(args=None):
     
 if __name__=="__main__":
     main()
-    
+	
+
