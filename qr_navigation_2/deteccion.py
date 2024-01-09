@@ -1,5 +1,5 @@
 import rclpy
-from rclpy import Node
+from rclpy.node import Node
 from std_msgs.msg import Bool,Int8,Float64,Header
 from geometry_msgs.msg import Twist,Point
 from sensor_msgs.msg import Image
@@ -11,13 +11,16 @@ import math
 
 
 class Detect(Node):
+   
     def __init__(self):
         super().__init__("Aruco_node")
+        self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
         self.cmd_vel = self.create_publisher(Twist,"cmd_vel",10)
         self.x = 0
         self.y = 0
         self.distance = None
-        
+        self.contador = 0
+        self.aruco_dis = False
         self.ARUCO_DICT = {
             "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
             "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
@@ -70,13 +73,15 @@ class Detect(Node):
         
         self.mirror_ref = sl.Transform()
         self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
-         
-        self.timer = self.create_timer(0.01,self.detect)
+
+        self.timer = self.create_timer(0.001,self.detect)
         
     def aruco_display(self,corners, ids, rejected, image):
+        
         if len(corners) > 0:
             ids = ids.flatten()
-            
+            self.aruco_dis = True
+            self.contador +=1  
             for (markerCorner, markerID) in zip(corners, ids):
                 
                 corners = markerCorner.reshape((4, 2))
@@ -99,7 +104,10 @@ class Detect(Node):
                 cv2.putText(image, str(markerID),(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
                     0.5, (0, 255, 0), 2)
                 
-                print("[Inference] ArUco marker ID: {}".format(markerID))                
+                print("[Inference] ArUco marker ID: {}".format(markerID))      
+        else:
+            self.aruco_dis=False
+            self.contador=0       
         return image
     
     def cv2_to_imgmsg(self, image, encoding = "bgr8"):
@@ -112,14 +120,17 @@ class Detect(Node):
             self.curr_signs_image_msg.is_bigendian = 0
             self.curr_signs_image_msg.step = image.shape[1]*image.shape[2]
 
-            data = np.reshape(image, (self.curr_signs_image_msg.height, self.curr_signs_image_msg.step) )
-            data = np.reshape(image, (self.curr_signs_image_msg.height*self.curr_signs_image_msg.step) )
-            data = list(data)
+            #data = np.reshape(image, (self.curr_signs_image_msg.height, self.curr_signs_image_msg.step) )
+            #data = np.reshape(image, (self.curr_signs_image_msg.height*self.curr_signs_image_msg.step) )
+            #data = list(data)
+            
+            data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
+            data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
             self.curr_signs_image_msg.data = data
             return self.curr_signs_image_msg
         else:            
             raise Exception("Error while convering cv image to ros message") 
-          
+
     def detect(self):
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Retrieve left image
@@ -143,28 +154,38 @@ class Detect(Node):
             err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
             #distance = 0
             if math.isfinite(point_cloud_value[2]):
-                self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
-                                    point_cloud_value[1] * point_cloud_value[1] +
-                                    point_cloud_value[2] * point_cloud_value[2])
-                print(f"Distance to Camera at {{{self.x};{self.y}}}: {self.distance}")
-		transform_aruco_midpoint_to_metric_system(point_cloud_value)
-            else : 
-        
-                print(f"The distance can not be computed at {{{self.x},{self.y}}}")
+
+                if self.contador >= 2:
+                    self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
+                                        point_cloud_value[1] * point_cloud_value[1] +
+                                        point_cloud_value[2] * point_cloud_value[2])
+                    print(f"Distance to Aruco at {{{self.x};{self.y}}}: {self.distance}")
+                    print(f"Contador: {self.contador}")
+                    
+                    self.x_zed = round(self.image.get_width() / 2)
+                    self.y_zed = round(self.image.get_height() / 2)
+                    cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
+                    
+                    print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+                    self.contador = 0
+                    
+                    if self.x > (self.x_zed+20):
+                        print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
+                    elif self.x < (self.x_zed-20):
+                        print(f"Aruco a la izquierda por: {self.x - self.x_zed} pixeles")
+                    elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+                        print(f"Aruco al centro")
+                        cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+                         
+                    
+                else:
+                    self.distance=None
+                    print("Not detected ",self.aruco_dis)
             cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-def transform_aruco_midpoint_to_metric_system(self, point_cloud_value): 
-   
-        x_m = (0.25738586)*(point_cloud_value[0]) + 0.05862189
-
-        x_px_times_y_px = point_cloud_value[0]*point_cloud_value[1]
-        y_m = 0.29283879*point_cloud_value[0] + 0.00050015*point_cloud_value[1] + 0.00094536*x_px_times_y_px + 0.23096646
-
-        x_px_times_z_px = point_cloud_value[0]*point_cloud_value[2]
-        z_m = 0.16725805*point_cloud_value[0] - 0.00069012*point_cloud_value[2] + 0.00098029*x_px_times_z_px - 0.04520938 
-	self.distance = math.sqrt(x_m+y_m+z_m)
-        print(f"Distance to Camera at: {{{self.x_m};{self.y_m}}}: {self.distance}")
-
+            self.cv2_to_imgmsg(detected_markers)
+            self.publisher_.publish(self.curr_signs_image_msg)
+            
 def main(args=None):
 	rclpy.init(args=args)
 	detect = Detect()
