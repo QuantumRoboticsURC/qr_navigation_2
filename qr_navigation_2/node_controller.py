@@ -13,9 +13,9 @@ class NodeController(Node):
         # Suscripciones
         self.create_subscription(Twist, 'cmd_vel_ca', self.cmd_vel_ca_callback, 10)
         self.create_subscription(Bool, 'arrived_ca', self.arrived_ca_callback, 10)
-        self.create_subscription(Int32, 'target_type', self.target_type_callback, 10)
+        self.s = self.create_subscription(Int32, 'target_type', self.target_type_callback, 10)
         self.create_subscription(Twist, 'cmd_vel_fg', self.cmd_vel_fg_callback, 10)
-        self.create_subscription(Bool, 'arrived_fg', self.arrived_fg_callback, 10)
+        self.test = self.create_subscription(Bool, 'arrived_fg', self.arrived_fg_callback, 10)
         self.create_subscription(Bool, 'arrived_sr', self.arrived_sr_callback, 10)
         self.create_subscription(Twist, 'cmd_vel_sr', self.cmd_vel_sr_callback, 10)
         self.create_subscription(Bool, '/go', self.go_start, 10)
@@ -35,7 +35,7 @@ class NodeController(Node):
         # Contenedores
         self.parameters = {0: "gps_only", 1: "gps_aruco", 2: "gps_hammer", 3: "gps_bottle"}
         self.target_function = ""
-        self.timer = self.create_timer(0.01, self.controller)
+        self.timer = self.create_timer(0.05, self.controller)
 
     # Callbacks para los tópicos suscritos
     def go_start(self, msg):
@@ -47,6 +47,7 @@ class NodeController(Node):
             self.pub_cmd_vel.publish(self.cmd_vel)
 
     def arrived_ca_callback(self, msg):
+        print("Center and Approach callback, ",msg.data)
         self.check_arrived(msg)
 
     def target_type_callback(self, msg):
@@ -62,9 +63,11 @@ class NodeController(Node):
             self.pub_cmd_vel.publish(self.cmd_vel)
 
     def arrived_fg_callback(self, msg):
+        print("Follow GPS callback, ",msg.data)
         self.check_arrived(msg)
 
     def arrived_sr_callback(self, msg):
+        print("Search routine callback, ",msg.data)
         self.check_arrived(msg)
 
     def cmd_vel_sr_callback(self, msg):
@@ -73,13 +76,17 @@ class NodeController(Node):
             self.pub_cmd_vel.publish(self.cmd_vel)
 
     def check_arrived(self, msg):
+        print("Entered check_arrived ")
         if msg.data:
             self.arrived = True
             arrived_msg = Bool()
             arrived_msg.data = True
             self.pub_arrived.publish(arrived_msg)
+            print(f"Finished {self.target_function}")
+            self.target_function=""
         else:
             self.arrived = False
+        print("Self.arrived: ",self.arrived)
 
     def controller(self):
         if self.start is True:
@@ -90,20 +97,18 @@ class NodeController(Node):
                 self.state.data = 0
                 self.pub_state.publish(self.state)
                 self.has_started = True
-                while not self.arrived:
-                    pass
+                print("Waiting ...")
+                
+                
 
             elif self.target_function == "gps_aruco":
                 print("Performing actions for target function 'gps_aruco'")
                 self.state.data = 0
                 self.pub_state.publish(self.state)
-                while not self.arrived:
-                    pass
                 self.arrived = False
                 self.state.data = 4
                 self.pub_state.publish(self.state)
-                while not self.arrived:
-                    pass
+                
 
             elif self.target_function == "gps_hammer":
                 print("Performing actions for target function 'gps_hammer'")
@@ -127,9 +132,9 @@ class NodeController(Node):
                 self.state.data = 2
                 while not self.arrived:
                     pass
-        started = Bool()
-        started.data = False
-        self.pub_go.publish(started)
+        #started = Bool()
+        #started.data = False
+        #self.pub_go.publish(started)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -140,7 +145,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-
-
