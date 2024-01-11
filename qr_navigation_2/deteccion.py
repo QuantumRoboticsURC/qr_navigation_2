@@ -16,6 +16,12 @@ class Detect(Node):
         super().__init__("Aruco_node")
         self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
         self.cmd_vel = self.create_publisher(Twist,"cmd_vel",10)
+        self.twist = Twist()
+        
+        self.vel_x = 0.33
+        self.vel_y = 0
+        self.vel_theta = 0.1
+        
         self.x = 0
         self.y = 0
         self.distance = None
@@ -176,12 +182,11 @@ class Detect(Node):
                     elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
                         print(f"Aruco al centro")
                         cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-                         
                     
                 else:
                     self.distance=None
                     print("Not detected ",self.aruco_dis)
+
             cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
             self.cv2_to_imgmsg(detected_markers)
             self.publisher_.publish(self.curr_signs_image_msg)
