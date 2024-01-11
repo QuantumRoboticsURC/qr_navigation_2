@@ -1,8 +1,9 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool,Int8,Float64,Header
+from std_msgs.msg import Bool,Int8,Float64,Header,Int32
 from geometry_msgs.msg import Twist,Point
 from sensor_msgs.msg import Image
+from custom_interfaces.msg import CA
 import numpy as np
 import time
 import cv2
@@ -15,8 +16,10 @@ class Detect(Node):
     def __init__(self):
         super().__init__("Aruco_node")
         self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
-        self.cmd_vel = self.create_publisher(Twist,"cmd_vel",10)
+        self.center_approach = self.create_publisher(CA,"center_approach",10)
         self.twist = Twist()
+        self.found = self.create_publisher(Bool, "found_object", 1)
+        self.CA = CA()
         
         self.vel_x = 0.33
         self.vel_y = 0
@@ -27,6 +30,8 @@ class Detect(Node):
         self.distance = None
         self.contador = 0
         self.aruco_dis = False
+        self.is_center = False
+
         self.ARUCO_DICT = {
             "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
             "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
@@ -160,8 +165,10 @@ class Detect(Node):
             err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
             #distance = 0
             if math.isfinite(point_cloud_value[2]):
-
+                detected = Bool()
                 if self.contador >= 2:
+                    detected.data = True
+                    self.found.publish(detected)
                     self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
                                         point_cloud_value[1] * point_cloud_value[1] +
                                         point_cloud_value[2] * point_cloud_value[2])
@@ -173,16 +180,19 @@ class Detect(Node):
                     cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
                     
                     print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
-                    self.contador = 0
-                    
+                    self.CA.distance = self.distance
+                    self.CA.x = self.x - self.x_zed
                     if self.x > (self.x_zed+20):
                         print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
+                        self.CA.detected = False
                     elif self.x < (self.x_zed-20):
                         print(f"Aruco a la izquierda por: {self.x - self.x_zed} pixeles")
+                        self.CA.detected = False
                     elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
                         print(f"Aruco al centro")
                         cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                    
+                        self.CA.detected = True
+                    self.center_approach.publish(self.CA)
                 else:
                     self.distance=None
                     print("Not detected ",self.aruco_dis)
