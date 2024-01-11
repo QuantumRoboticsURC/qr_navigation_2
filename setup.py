@@ -21,7 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': ['deteccion=qr_navigation_2.deteccion:main','followGPS=qr_navigation_2.follow_gps:main','test_gps=qr_navigation_2.test_listener_gps:main','pub=qr_navigation_2.test_publisher:main','qos=qr_navigation_2.test_qos:main','imu=qr_navigation_2.test_imu:main','sus=qr_navigation_2.test_subscriber:main','controller=qr_navigation_2.node_controller:main'
-                            ,'web=qr_navigation_2.fake_web:main'
+                            ,'web=qr_navigation_2.fake_web:main','center_approach=qr_navigation_2.center_and_approach_test:main'
         ],
     },
 )

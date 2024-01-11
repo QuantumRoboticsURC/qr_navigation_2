@@ -6,7 +6,6 @@ from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
 from std_msgs.msg import Int8,Bool
 from ublox_ubx_msgs.msg import UBXNavHPPosLLH
-from custom_interfaces.srv import FollowGPS
 from custom_interfaces.msg import TargetCoordinates
 from std_msgs.msg import Float64
 import numpy
@@ -123,7 +122,7 @@ class Follow_GPS(Node):
 			self.arrived_pub.publish(arrived)
 			self.state_pub.publish(state)
 			self.cmd_vel.publish(self.twist)
-			time.sleep(1)
+			time.sleep(5)
 
 
 def main(args=None):
