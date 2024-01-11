@@ -13,12 +13,12 @@ class Center_approach(Node):
         self.Twist = Twist()
         
         self.vel_x = 0.33
-        self.vel_y = 0
+        self.vel_y = 0.0
         self.vel_theta = 0.1
         
-        self.distance = 0
+        self.distance = 0.0
         self.found = False
-        self.x = 0
+        self.x = 0.0
         self.center = False
         self.timer = self.create_timer(0.01, self.get_aruco)
     def callback(self,msg):
@@ -30,21 +30,21 @@ class Center_approach(Node):
     def approach(self):
         if (self.distance > 2000):
             self.Twist.linear.x = self.vel_x
-            self.Twist.angular.z = 0
+            self.Twist.angular.z = 0.0
         else:
-            self.Twist.linear.x = 0
-            self.Twist.angular.z = 0 
+            self.Twist.linear.x = 0.0
+            self.Twist.angular.z = 0.0
     def get_aruco(self):
         if (self.found):
             if (self.center):
                 self.approach()
                 print("Centro")
             elif (self.x < 0):
-                self.Twist.linear.x = 0
+                self.Twist.linear.x = 0.0
                 self.Twist.angular.z = self.vel_theta
                 print("Izquierda")
             elif (self.x > 0):
-                self.Twist.linear.x = 0
+                self.Twist.linear.x = 0.0
                 self.Twist.angular.z = -self.vel_theta
                 print("Derecha")
             self.cmd_vel.publish(self.Twist)    
