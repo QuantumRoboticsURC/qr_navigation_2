@@ -15,12 +15,19 @@ class Detect(Node):
    
     def __init__(self):
         super().__init__("Aruco_node")
+
+        #Publicadores
         self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
         self.center_approach = self.create_publisher(CA,"center_approach",10)
-        self.twist = Twist()
         self.found = self.create_publisher(Bool, "found_object", 1)
-        self.CA = CA()
+
+
+        #Suscripciones
+        self.sub_state = self.create_subscription ("state", Int32, self.update_state,10)
         
+        self.CA = CA()
+        self.state = Int32()
+        self.twist = Twist()
         self.vel_x = 0.33
         self.vel_y = 0
         self.vel_theta = 0.1
@@ -86,6 +93,9 @@ class Detect(Node):
         self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
 
         self.timer = self.create_timer(0.001,self.detect)
+    
+    def update_state(self,msg):
+        self.state=msg.data
         
     def aruco_display(self,corners, ids, rejected, image):
         
