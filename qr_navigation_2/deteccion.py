@@ -180,6 +180,7 @@ class Detect(Node):
                     cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
                     
                     print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+                    
                     self.CA.distance = self.distance
                     self.CA.x = self.x - self.x_zed
                     if self.x > (self.x_zed+20):
