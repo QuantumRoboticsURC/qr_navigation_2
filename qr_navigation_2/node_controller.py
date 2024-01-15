@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# Controlador
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, Int8
@@ -56,6 +54,7 @@ class NodeController(Node):
         print(f"Setting target_function: {self.target_function}")
         self.start = True
         print("Setting self.start to True")
+        self.state.data=0
 
     def cmd_vel_fg_callback(self, msg):
         if self.state.data == 0:
@@ -77,13 +76,44 @@ class NodeController(Node):
 
     def check_arrived(self, msg):
         print("Entered check_arrived ")
+        #print (f"{self.target_function}")
+        #print (f"print :{self.state.data}")
         if msg.data:
             self.arrived = True
             arrived_msg = Bool()
             arrived_msg.data = True
-            self.pub_arrived.publish(arrived_msg)
-            print(f"Finished {self.target_function}")
-            self.target_function=""
+            if self.target_function == "gps_only":
+            	self.pub_arrived.publish(arrived_msg)
+            	print(f"Finished {self.target_function}")
+            	self.target_function=""
+            	self.start = False
+            	print("Finished gps_only")
+            elif self.target_function == "gps_aruco" and self.state.data==0:
+            	self.state.data = 4
+            	self.pub_state.publish(self.state)
+            	print (f"{self.state.data}")
+            elif self.target_function == "gps_aruco" and self.state.data==4:
+            	self.target_function=""
+            	self.start = False
+            	print("Finished gps_aruco")
+            elif self.target_function == "gps_hammer" and self.state.data==0:
+            	self.state.data = 3
+            	self.pub_state.publish(self.state)
+            	print (f"{self.state.data}")
+            elif self.target_function == "gps_hammer" and self.state.data==3:
+            	self.target_function=""
+            	self.start = False
+            	print("Finished gps_hammer")
+            elif self.target_function == "gps_bottle" and self.state.data==0:
+            	self.state.data = 2
+            	self.pub_state.publish(self.state)
+            	print (f"{self.state.data}")
+            elif self.target_function == "gps_bottle" and self.state.data==2:
+            	self.target_function=""
+            	self.start = False
+            	print("Finished gps_hammer")
+            	
+            	
         else:
             self.arrived = False
         print("Self.arrived: ",self.arrived)
@@ -94,7 +124,6 @@ class NodeController(Node):
 
             if self.target_function == "gps_only":
                 print("Performing actions for target function 'gps_only'")
-                self.state.data = 0
                 self.pub_state.publish(self.state)
                 self.has_started = True
                 print("Waiting ...")
@@ -103,38 +132,30 @@ class NodeController(Node):
 
             elif self.target_function == "gps_aruco":
                 print("Performing actions for target function 'gps_aruco'")
-                self.state.data = 0
                 self.pub_state.publish(self.state)
                 self.arrived = False
-                self.state.data = 4
-                self.pub_state.publish(self.state)
+                print("Waiting ...")
+                print(f"Excecuting {self.state.data}")
+                
                 
 
             elif self.target_function == "gps_hammer":
                 print("Performing actions for target function 'gps_hammer'")
-                self.state.data = 0
                 self.pub_state.publish(self.state)
-                while not self.arrived:
-                    pass
                 self.arrived = False
-                self.state.data = 3
-                self.pub_state.publish(self.state)
-                while not self.arrived:
-                    pass
+                print("Waiting ...")
+                print(f"Excecuting {self.state.data}")
 
             elif self.target_function == "gps_bottle":
                 print("Performing actions for target function 'gps_bottle'")
-                self.state.data = 0
                 self.pub_state.publish(self.state)
-                while not self.arrived:
-                    pass
                 self.arrived = False
-                self.state.data = 2
-                while not self.arrived:
-                    pass
+                print("Waiting ...")
+                print(f"Excecuting {self.state.data}")
         #started = Bool()
         #started.data = False
         #self.pub_go.publish(started)
+
 
 def main(args=None):
     rclpy.init(args=args)
