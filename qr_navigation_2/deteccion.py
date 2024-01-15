@@ -77,13 +77,15 @@ class Detect(Node):
         self.image = sl.Mat()
         self.depth = sl.Mat()
         self.point_cloud = sl.Mat()
-        self.curr_signs_image_msg = Image()
         
         self.image_ocv = self.image.get_data()
+        self.image_ocv = self.image_ocv[:,:-1]
         self.depth_ocv = self.image.get_data()
         
         self.mirror_ref = sl.Transform()
         self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
+
+        self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv, encoding="bgr8")
 
         self.timer = self.create_timer(0.001,self.detect)
         
@@ -157,7 +159,7 @@ class Detect(Node):
             #grayimgD = cv2.cvtColor(depth_ocv, cv2.COLOR_BGR2GRAY)
             corners, ids, rejected = cv2.aruco.detectMarkers(grayimg, self.arucoDict, parameters=self.arucoParams)
             detected_markers = self.aruco_display(corners, ids, rejected, self.image_ocv)
-
+            
     
             # Get and print distance value in mm at the center of the image
             # We measure the distance camera - object using Euclidean distance

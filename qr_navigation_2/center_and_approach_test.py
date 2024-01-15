@@ -34,6 +34,7 @@ class Center_approach(Node):
         else:
             self.Twist.linear.x = 0.0
             self.Twist.angular.z = 0.0
+        self.cmd_vel.publish(self.Twist) 
     def get_aruco(self):
         if (self.found):
             if (self.center):
