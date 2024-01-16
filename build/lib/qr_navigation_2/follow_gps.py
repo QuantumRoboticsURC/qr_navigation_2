@@ -36,7 +36,7 @@ class Follow_GPS(Node):
 		self.arrived_pub = self.create_publisher(Bool,'arrived_fg',1)
 		self.state_pub = self.create_publisher(Int8,'state',10)
 		self.target_coordinates = self.create_subscription(TargetCoordinates,"/target_coordinates",self.update_target,1)
-		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
+		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
 		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10)    
 		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state,10)
 
@@ -71,7 +71,7 @@ class Follow_GPS(Node):
 		if(not self.HAS_STARTED):
 			self.update_position()
 		print(f"coordinates: {self.gps_coordinates}")
-  
+
 	def update_state(self,msg):
 		self.state=msg.data
 		
@@ -118,9 +118,8 @@ class Follow_GPS(Node):
 			self.arrived_pub.publish(arrived)
 			self.state_pub.publish(state)
 			self.cmd_vel.publish(self.twist)
-   
 			time.sleep(1)
-   
+
 
 
 def main(args=None):

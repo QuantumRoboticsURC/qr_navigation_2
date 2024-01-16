@@ -8,7 +8,7 @@ class Center_approach(Node):
     def __init__(self):
         super().__init__("center")
         self.create_subscription(CA, "center_approach", self.callback,10)
-        self.create_subscription(Bool, "found_object", self.aruco, 1)
+        self.create_subscription(Bool, "detected_aruco", self.aruco, 1)
         self.cmd_vel = self.create_publisher(Twist, "cmd_vel", 10)
         self.Twist = Twist()
         
@@ -36,11 +36,8 @@ class Center_approach(Node):
         else:
             self.Twist.linear.x = 0.0
             self.Twist.angular.z = 0.0
-<<<<<<< HEAD
         self.cmd_vel.publish(self.Twist) 
-=======
-            
->>>>>>> 91f2a2d1ea70a4566c82a4b17fbc90290b6292e6
+
     def get_aruco(self):
         if (self.found):
             if (self.center):

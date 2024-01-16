@@ -18,7 +18,7 @@ class Detect(Node):
         self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
         self.center_approach = self.create_publisher(CA,"center_approach",10)
         self.twist = Twist()
-        self.found = self.create_publisher(Bool, "found_object", 1)
+        self.found = self.create_publisher(Bool, "detected_aruco", 1)
         self.CA = CA()
         
         self.vel_x = 0.33
