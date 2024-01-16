@@ -4,6 +4,7 @@ from std_msgs.msg import Bool,Int8,Float64,Header,Int32
 from geometry_msgs.msg import Twist,Point
 from sensor_msgs.msg import Image
 from custom_interfaces.msg import CA
+from cv_bridge import CvBridge
 import numpy as np
 import time
 import cv2
@@ -20,6 +21,7 @@ class Detect(Node):
         self.twist = Twist()
         self.found = self.create_publisher(Bool, "detected_aruco", 1)
         self.CA = CA()
+        self.bridge = CvBridge()
         
         self.vel_x = 0.33
         self.vel_y = 0
@@ -124,25 +126,28 @@ class Detect(Node):
         return image
     
     def cv2_to_imgmsg(self, image, encoding = "bgr8"):
+        msg = self.bridge.cv2_to_imgmsg(image, encoding)
+        return msg
         #print("cv2_to_imgmsg image shape is:" + str(image.shape))
-        if encoding == "bgr8":
-            self.curr_signs_image_msg.header = Header()
-            self.curr_signs_image_msg.height = image.shape[0]
-            self.curr_signs_image_msg.width = image.shape[1]
-            self.curr_signs_image_msg.encoding = encoding
-            self.curr_signs_image_msg.is_bigendian = 0
-            self.curr_signs_image_msg.step = image.shape[1]*image.shape[2]
+        #if encoding == "bgr8":
+            #self.curr_signs_image_msg.header = Header()
+            #self.curr_signs_image_msg.height = image.shape[0]
+            #self.curr_signs_image_msg.width = image.shape[1]
+            #self.curr_signs_image_msg.encoding = encoding
+            #self.curr_signs_image_msg.is_bigendian = 0
+            #self.curr_signs_image_msg.step = image.shape[1]*image.shape[2]
 
             #data = np.reshape(image, (self.curr_signs_image_msg.height, self.curr_signs_image_msg.step) )
             #data = np.reshape(image, (self.curr_signs_image_msg.height*self.curr_signs_image_msg.step) )
             #data = list(data)
             
-            data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
-            data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
-            self.curr_signs_image_msg.data = data
-            return self.curr_signs_image_msg
-        else:            
-            raise Exception("Error while convering cv image to ros message") 
+            #data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
+            #data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
+            #self.curr_signs_image_msg.data = data
+            #return self.curr_signs_image_msg
+        #else:            
+            #raise Exception("Error while convering cv image to ros message") 
+        
 
     def detect(self):
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
@@ -202,7 +207,8 @@ class Detect(Node):
 
             cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
             self.cv2_to_imgmsg(detected_markers)
-            self.publisher_.publish(self.curr_signs_image_msg)
+            self.publisher_.publish(self.cv2_to_imgmsg(detected_markers))
+            self.get_logger().info("Publicando video")
             
 def main(args=None):
 	rclpy.init(args=args)

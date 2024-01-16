@@ -36,6 +36,8 @@ class Center_approach(Node):
         else:
             self.Twist.linear.x = 0.0
             self.Twist.angular.z = 0.0
+            self.found = False
+            print("Terminado")
         self.cmd_vel.publish(self.Twist) 
 
     def get_aruco(self):
@@ -43,6 +45,7 @@ class Center_approach(Node):
             if (self.center):
                 self.approach()
                 print("Centro")
+
             elif (self.x < 0):
                 self.Twist.linear.x = 0.0
                 self.Twist.angular.z = self.vel_theta
