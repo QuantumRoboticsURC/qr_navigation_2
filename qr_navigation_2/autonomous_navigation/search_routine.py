@@ -55,7 +55,7 @@ class Search_routine(Node):
 
     #2, 3, 4
     def routine(self,num_turns = 2):      
-        if self.sub_state == 2 or self.sub_state ==3 or self.sub_state ==4:
+        if self.state == 2 or self.state ==3 or self.state ==4:
             origin = (0,0)
             cords_list = [origin]
             current_cord = origin
