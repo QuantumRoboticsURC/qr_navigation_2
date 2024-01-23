@@ -21,7 +21,6 @@ class Detect_Object(Node):
         self.found = self.create_publisher(Bool, "detected_orange", 1)
         self.CA = CA()
         self.bridge = CvBridge()
-        self.detected_flag = False
         
         self.vel_x = 0.33
         self.vel_y = 0
@@ -134,12 +133,7 @@ class Detect_Object(Node):
 
             self.corners = self.contornos(self.image_ocv)
 
-            if self.detected_flag:
-
-                detected_orange = self.image_ocv
-            else:
-
-                detected_orange = self.orange_display(self.corners, self.image_ocv)
+            detected_orange = self.orange_display(self.corners, self.image_ocv)
 
 
 
@@ -183,7 +177,6 @@ class Detect_Object(Node):
                     if self.contador >= 2:
                         detected.data = True
                         self.found.publish(detected)
-                        self.detected_flag = True
                         self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
                                             point_cloud_value[1] * point_cloud_value[1] +
                                             point_cloud_value[2] * point_cloud_value[2])
