@@ -12,7 +12,7 @@ class Center_approach(Node):
         self.cmd_vel = self.create_publisher(Twist, "cmd_vel", 10)
         self.Twist = Twist()
         
-        self.vel_x = 0.33
+        self.vel_x = 0.16
         self.vel_y = 0.0
         self.vel_theta = 0.1
         self.distance = 0.0

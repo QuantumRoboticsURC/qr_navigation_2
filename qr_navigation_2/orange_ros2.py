@@ -21,6 +21,7 @@ class Detect_Object(Node):
         self.found = self.create_publisher(Bool, "detected_orange", 1)
         self.CA = CA()
         self.bridge = CvBridge()
+        self.detected_flag = False
         
         self.vel_x = 0.33
         self.vel_y = 0
@@ -29,6 +30,7 @@ class Detect_Object(Node):
         self.x = 0
         self.y = 0
         self.distance = None
+        self.posicion = ""
         self.contador = 0
         self.orange_dis_dis = False
         self.is_center = False
@@ -77,12 +79,9 @@ class Detect_Object(Node):
 
                 cx = int(x + w / 2.0)
                 cy = int(y + h / 2.0)
-                cv2.circle(image, (cx, cy),4, (0, 0, 255), -1)
                 print(f"x,y: {cx}, {cy}")
                 self.x = cx
                 self.y = cy
-
-                cv2.putText(image, f'Naranja', (x, x -10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                 print("Objeto naranja detectado")
 
         else:
@@ -98,10 +97,10 @@ class Detect_Object(Node):
 
     def contornos(self, image):
 
-        # Obtener los valores actuales de los trackbars
-        orange_low_hue = 0
+        # Obtener los valores actuales de color
+        orange_low_hue = 5
         orange_high_hue = 22
-        orange_low_saturation = 130 
+        orange_low_saturation = 130
         orange_high_saturation = 255
         orange_low_value = 160
         orange_high_value = 255
@@ -122,6 +121,7 @@ class Detect_Object(Node):
 
 
     def detect(self):
+        
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Retrieve left image
             self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
@@ -134,7 +134,12 @@ class Detect_Object(Node):
 
             self.corners = self.contornos(self.image_ocv)
 
-            detected_orange = self.orange_display(self.corners, self.image_ocv)
+            if self.detected_flag:
+
+                detected_orange = self.image_ocv
+            else:
+
+                detected_orange = self.orange_display(self.corners, self.image_ocv)
 
 
 
@@ -156,13 +161,13 @@ class Detect_Object(Node):
 
                 # Determinar la posición relativa
                 if centro_objeto[0] < centro_imagen[0] - 50:
-                    posicion = "A la izquierda"
+                    self.posicion = "A la izquierda"
                     print("A la izquierda")
                 elif centro_objeto[0] > centro_imagen[0] + 50:
-                    posicion = "A la derecha"
+                    self.posicion = "A la derecha"
                     print("A la derecha")
                 else:
-                    posicion = "Centrado"
+                    self.posicion = "Centrado"
                     print("Centrado")
 
                 # Dibujar un rectángulo alrededor del objeto naranja
@@ -170,23 +175,6 @@ class Detect_Object(Node):
 
                 cv2.putText(self.image_ocv, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-                # Dibujar rectángulo de información
-                rect_height = 80
-                rect_top_left = (10, 10)
-                rect_bottom_right = (wd - 10, rect_height)
-                rect_thickness = -1  # Relleno del rectángulo
-                rect_alpha = 0.3  # Opacidad del rectángulo
-
-                # Crear una máscara para el rectángulo
-                mask_rect = np.zeros_like(self.image_ocv)
-                cv2.rectangle(mask_rect, rect_top_left, rect_bottom_right, (255, 255, 255), rect_thickness)
-
-                # Fusionar la imagen original y la máscara del rectángulo
-                img = cv2.addWeighted(self.image_ocv, 1.0, mask_rect, rect_alpha, 0)
-
-                cv2.putText(img, f"Posicion: {posicion if self.corners else 'null'}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-                cv2.putText(img, f"Objeto naranja encontrado: {'Si' if self.corners else 'No'}", (20, 70),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
                 err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
                 #distance = 0
@@ -195,6 +183,7 @@ class Detect_Object(Node):
                     if self.contador >= 2:
                         detected.data = True
                         self.found.publish(detected)
+                        self.detected_flag = True
                         self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
                                             point_cloud_value[1] * point_cloud_value[1] +
                                             point_cloud_value[2] * point_cloud_value[2])
@@ -224,10 +213,16 @@ class Detect_Object(Node):
                         self.distance=None
                         print("Not detected ",self.orange_dis)
 
-                cv2.putText(detected_orange, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                 self.cv2_to_imgmsg(detected_orange)
                 self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
                 self.get_logger().info("Publicando video")
+            
+            else:      
+                self.cv2_to_imgmsg(detected_orange)
+                self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
+                self.get_logger().info("Publicando video sin deteccion")
                     
 def main(args=None):
     rclpy.init(args=args)
