@@ -89,7 +89,7 @@ class Detect(Node):
         self.mirror_ref = sl.Transform()
         self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
 
-        self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv, encoding="bgr8")
+        #self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
 
         self.timer = self.create_timer(0.001,self.detect)
         
@@ -127,8 +127,8 @@ class Detect(Node):
             self.contador=0       
         return image
     
-    def cv2_to_imgmsg(self, image, encoding = "bgr8"):
-        msg = self.bridge.cv2_to_imgmsg(image, encoding)
+    def cv2_to_imgmsg(self, image):
+        msg = self.bridge.cv2_to_imgmsg(image, encoding = "bgra8")
         return msg
     
     def update_state(self, msg):

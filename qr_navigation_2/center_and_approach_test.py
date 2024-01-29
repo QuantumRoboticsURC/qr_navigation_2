@@ -9,10 +9,11 @@ class Center_approach(Node):
         super().__init__("center")
         self.create_subscription(CA, "center_approach", self.callback,10)
         self.create_subscription(Bool, "detected_aruco", self.aruco, 1)
-        self.cmd_vel = self.create_publisher(Twist, "cmd_vel", 10)
+        self.create_subscription(Bool, "arrived_ca", self.arrived_ca_callback, 10)
+        self.cmd_vel_ca = self.create_publisher(Twist, "cmd_vel_ca", 10)
         self.Twist = Twist()
         
-        self.vel_x = 0.33
+        self.vel_x = 0.16
         self.vel_y = 0.0
         self.vel_theta = 0.1
         self.distance = 0.0
@@ -37,8 +38,10 @@ class Center_approach(Node):
             self.Twist.linear.x = 0.0
             self.Twist.angular.z = 0.0
             self.found = False
+            self.arrived_ca = True
             print("Terminado")
-        self.cmd_vel.publish(self.Twist) 
+
+        self.cmd_vel_ca.publish(self.Twist) 
 
     def get_aruco(self):
         if (self.found):
@@ -54,7 +57,7 @@ class Center_approach(Node):
                 self.Twist.linear.x = 0.0
                 self.Twist.angular.z = -self.vel_theta
                 print("Derecha")
-            self.cmd_vel.publish(self.Twist)    
+            self.cmd_vel_ca.publish(self.Twist)    
     
 def main(args=None):
 	rclpy.init(args=args)

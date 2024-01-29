@@ -1,6 +1,10 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import *
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from threading import Thread
+
 from .submodules.alvinxy import *
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
@@ -31,32 +35,35 @@ class Follow_GPS(Node):
 	def __init__(self):
 		super().__init__('go_to_gps')
 		#Probably will be replaced for a service 
+		timer_group = MutuallyExclusiveCallbackGroup()
+		listener_group = ReentrantCallbackGroup()
+  
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel_fg',10)
 		self.arrived_pub = self.create_publisher(Bool,'arrived_fg',1)
 		self.state_pub = self.create_publisher(Int8,'state',10)
-		self.target_coordinates = self.create_subscription(TargetCoordinates,"/target_coordinates",self.update_target,1)
+		self.target_coords = self.create_subscription(TargetCoordinates,"/target_coordinates",self.update_target,1,callback_group=listener_group)
 		self.reset_coords = self.create_publisher(TargetCoordinates,"/target_coordinates",1)
-		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
-		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10)    
-		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state,10)
+		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data,callback_group=listener_group)
+		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10,callback_group=listener_group)    
+		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state,10,callback_group=listener_group)
 
 		self.twist = Twist()
-		self.linear_velocity = 0.33
-		self.angular_velocity = 0.2
+		self.linear_velocity = 0.16
+		self.angular_velocity = 0.1
 		
 		self.gps_coordinates = [0.0,0.0]
-		self.target_coords = [None,None]
+		self.target_coordinates = [None,None]
 		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
 		self.orglong = 0.0
 		self.orglat = 0.0
 		self.HAS_STARTED = True
 		self.state = -1
-		self.timer = self.create_timer(0.01,self.followGPS2)
+		self.timer = self.create_timer(0.01,self.followGPS2,callback_group=timer_group)
 		
 
 	def update_target(self,msg):
-		self.target_coords[0]=msg.latitude
-		self.target_coords[1]=msg.longitude
+		self.target_coordinates[0]=msg.latitude
+		self.target_coordinates[1]=msg.longitude
 
 	def update_position(self):
 		self.x_rover,self.y_rover = ll2xy(self.gps_coordinates[0] ,self.gps_coordinates[1] ,self.orglat,self.orglong)
@@ -70,7 +77,7 @@ class Follow_GPS(Node):
 		self.gps_coordinates[1]=data.lon/(10000000)
 		if(not self.HAS_STARTED):
 			self.update_position()
-		print(f"coordinates: {self.gps_coordinates}")
+		
   
 	def update_state(self,msg):
 		self.state=msg.data
@@ -79,37 +86,50 @@ class Follow_GPS(Node):
 		quat = Quaternion()
 		quat = msg.orientation
 		angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-		self.angle = (angle_z+2*math.pi)%2*math.pi
-		print(f"Angle: {self.angle}")
+		self.angle = (angle_z+2*math.pi)%(2*math.pi)
+
 
 	def followGPS2(self):
-		if(self.state==0 and self.target_coords[0]!= None and self.target_coords[1]!=None):
+		if(self.state==0 and self.target_coordinates[0] != None and self.target_coordinates[1] != None):
 			print("Entered Follow GPS")
 			state = Int8()
 			arrived = Bool()
 			
-			x,y = ll2xy(self.target_coords[0],self.target_coords[1],self.orglat,self.orglong)
-			target_angle = (np.arctan2(y,x)+2*math.pi)%2*math.pi
+			dY= distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.gps_coordinates[1])
+			dX= distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.gps_coordinates[0],self.target_coordinates[1])
+			target_angle = (math.atan2(dY,dX)+2*math.pi)%(2*math.pi)
 			
 			if(self.angle>target_angle):
+				print(f"Target angle {target_angle} | current angle {self.angle}")
 				while(self.angle>target_angle):
+					self.twist.angular.z = -(abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+					self.cmd_vel.publish(self.twist)
 
-					self.twist.angular.z = -(abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-					self.cmd_vel.publish(self.twist)
 			else:
+				print(f"_Target angle {target_angle} | current angle {self.angle}")
 				while(self.angle<target_angle):
-					self.twist.angular.z = (abs((self.angle - 0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+
+					self.twist.angular.z = (abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 					self.cmd_vel.publish(self.twist)
-			
 			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
-			distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover))
-			control = distance
 			
+			distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
+			print(f"Prev= {math.atan2(dY,dX)}")
+			print(f"distance to x = {dX} | Distance to y= {dY} ")
+			print(f"Distance {distance}")
+			print(F"Distance cal = {np.sqrt(np.power(dX,2)+np.power(dY,2))}")
+			print(f"Current angle = {self.angle}")
+			time.sleep(3)
+
 			while(distance>0):
-				distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
-				self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
+				distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
+				#self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
+				self.twist.linear.x = 0.7
 				self.cmd_vel.publish(self.twist)
+				print(f"GPS = {self.gps_coordinates}")
+				print(f"distance to x = {dX} | Distance to y= {dY} ")
+				print(f"Distance {distance}")
 
 			self.twist.linear.x = 0.0
 			arrived.data=True
@@ -117,7 +137,7 @@ class Follow_GPS(Node):
 			coords = TargetCoordinates()
 			coords.latitude = None
 			coords.longitude = None
-   
+
 			self.reset_coords.publish(coords)
 			self.arrived_pub.publish(arrived)
 			self.state_pub.publish(state)
@@ -128,10 +148,11 @@ class Follow_GPS(Node):
 def main(args=None):
 	rclpy.init(args=args)
 	gps = Follow_GPS()
-	rclpy.spin(gps)
+	executor = MultiThreadedExecutor()
+	executor.add_node(gps)
+	executor.spin()
 	gps.destroy_node()
 	rclpy.shutdown()
-
     
 if __name__=="__main__":
     main()
