@@ -87,16 +87,3 @@ def xy2ll(x, y, orglat, orglon):
 # Vectorize
 vxy2ll = np.vectorize(xy2ll)
 vll2xy = np.vectorize(ll2xy)
-
-def distanceBetweenCoords(current_lat,current_long,target_lat,target_long):
-    earth_radius = 6371000
-    dLat = np.deg2rad(target_lat-current_lat)
-    dLon = np.deg2rad(target_long-current_long)
-    current_lat=np.deg2rad(current_lat)
-    target_lat=np.deg2rad(target_lat)
-    
-    a = np.sin(dLat/2)*np.sin(dLat/2)+np.sin(dLon/2)*np.sin(dLon/2)*np.cos(current_lat)*np.cos(target_lat)
-
-    c = 2*np.arctan2(np.sqrt(a),np.sqrt(1-a))
-    return earth_radius*c
-  

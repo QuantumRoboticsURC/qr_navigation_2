@@ -42,7 +42,13 @@ class NodeController(Node):
 	def cmd_vel_ca_callback(self, msg):
 		if self.arrived:
 			self.cmd_vel = msg
-			self.pub_cmd_vel.publish(self.cmd_vel)
+			if self.cmd_vel.linear.x<=0.2:
+				self.pub_cmd_vel.publish(self.cmd_vel)
+			else:
+				c =Twist()
+				c.linear.x=0.2
+				c.angular.z = self.cmd_vel.angular.z
+				self.pub_cmd_vel.publish(c)
 
 	def arrived_ca_callback(self, msg):
 		print("Center and Approach callback, ",msg.data)
@@ -59,7 +65,14 @@ class NodeController(Node):
 	def cmd_vel_fg_callback(self, msg):
 		if self.state.data == 0:
 			self.cmd_vel = msg
-			self.pub_cmd_vel.publish(self.cmd_vel)
+			if self.cmd_vel.linear.x > 0.2:
+				modified_cmd_vel = Twist()
+				modified_cmd_vel.linear.x = 0.2
+				modified_cmd_vel.angular.z = self.cmd_vel.angular.z
+				self.pub_cmd_vel.publish(modified_cmd_vel)
+			else:
+				self.pub_cmd_vel.publish(self.cmd_vel)
+
 
 	def arrived_fg_callback(self, msg):
 		print("Follow GPS callback, ",msg.data)
@@ -71,8 +84,14 @@ class NodeController(Node):
 
 	def cmd_vel_sr_callback(self, msg):
 		if self.state.data in [1, 2, 3] and not self.arrived:
-			self.cmd_vel = msg
-			self.pub_cmd_vel.publish(self.cmd_vel)
+			if msg.linear.x > 0.2:
+				modified_cmd_vel = Twist()
+				modified_cmd_vel.linear.x = 0.2
+				modified_cmd_vel.angular.z = msg.angular.z
+				self.pub_cmd_vel.publish(modified_cmd_vel)
+			else:
+				self.pub_cmd_vel.publish(msg)
+
 
 	def check_arrived(self, msg):
 		print("Entered check_arrived ")
