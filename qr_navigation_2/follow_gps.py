@@ -41,7 +41,7 @@ class Follow_GPS(Node):
 		self.cmd_vel = self.create_publisher(Twist,'cmd_vel_fg',10)
 		self.arrived_pub = self.create_publisher(Bool,'arrived_fg',1)
 		self.state_pub = self.create_publisher(Int8,'state',10)
-		self.target_coordinates = self.create_subscription(TargetCoordinates,"/target_coordinates",self.update_target,1,callback_group=listener_group)
+		self.target_coords = self.create_subscription(TargetCoordinates,"/target_coordinates",self.update_target,1,callback_group=listener_group)
 		self.reset_coords = self.create_publisher(TargetCoordinates,"/target_coordinates",1)
 		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data,callback_group=listener_group)
 		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10,callback_group=listener_group)    
@@ -52,7 +52,7 @@ class Follow_GPS(Node):
 		self.angular_velocity = 0.1
 		
 		self.gps_coordinates = [0.0,0.0]
-		self.target_coords = [None,None]
+		self.target_coordinates = [None,None]
 		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
 		self.orglong = 0.0
 		self.orglat = 0.0
@@ -62,8 +62,8 @@ class Follow_GPS(Node):
 		
 
 	def update_target(self,msg):
-		self.target_coords[0]=msg.latitude
-		self.target_coords[1]=msg.longitude
+		self.target_coordinates[0]=msg.latitude
+		self.target_coordinates[1]=msg.longitude
 
 	def update_position(self):
 		self.x_rover,self.y_rover = ll2xy(self.gps_coordinates[0] ,self.gps_coordinates[1] ,self.orglat,self.orglong)
