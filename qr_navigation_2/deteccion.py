@@ -22,6 +22,8 @@ class Detect(Node):
         self.found = self.create_publisher(Bool, "detected_aruco", 1)
         self.CA = CA()
         self.bridge = CvBridge()
+        self.state_pub = self.create_publisher(Int8, "state", 1)
+        self.create_subscription(Int8, "state", self.update_state, 1)
         
         self.vel_x = 0.33
         self.vel_y = 0
@@ -101,7 +103,7 @@ class Detect(Node):
                 
                 corners = markerCorner.reshape((4, 2))
                 (topLeft, topRight, bottomRight, bottomLeft) = corners
-    
+
                 topRight = (int(topRight[0]), int(topRight[1]))
                 bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
                 bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
@@ -128,88 +130,77 @@ class Detect(Node):
     def cv2_to_imgmsg(self, image, encoding = "bgr8"):
         msg = self.bridge.cv2_to_imgmsg(image, encoding)
         return msg
-        #print("cv2_to_imgmsg image shape is:" + str(image.shape))
-        #if encoding == "bgr8":
-            #self.curr_signs_image_msg.header = Header()
-            #self.curr_signs_image_msg.height = image.shape[0]
-            #self.curr_signs_image_msg.width = image.shape[1]
-            #self.curr_signs_image_msg.encoding = encoding
-            #self.curr_signs_image_msg.is_bigendian = 0
-            #self.curr_signs_image_msg.step = image.shape[1]*image.shape[2]
-
-            #data = np.reshape(image, (self.curr_signs_image_msg.height, self.curr_signs_image_msg.step) )
-            #data = np.reshape(image, (self.curr_signs_image_msg.height*self.curr_signs_image_msg.step) )
-            #data = list(data)
-            
-            #data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
-            #data = image.reshape(self.curr_signs_image_msg.height, self.curr_signs_image_msg.step).tobytes()
-            #self.curr_signs_image_msg.data = data
-            #return self.curr_signs_image_msg
-        #else:            
-            #raise Exception("Error while convering cv image to ros message") 
-        
+    
+    def update_state(self, msg):
+        self.state_pub = msg.data
 
     def detect(self):
-        if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
-            # Retrieve left image
-            self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
-            self.image_ocv = self.image.get_data()
-            # Retrieve depth map. Depth is aligned on the left image
-            self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
-            self.depth_ocv = self.depth.get_data()
-            # Retrieve colored point cloud. Point cloud is aligned on the left image.
-            self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
-    
-            grayimg = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGR2GRAY)
-            #grayimgD = cv2.cvtColor(depth_ocv, cv2.COLOR_BGR2GRAY)
-            corners, ids, rejected = cv2.aruco.detectMarkers(grayimg, self.arucoDict, parameters=self.arucoParams)
-            detected_markers = self.aruco_display(corners, ids, rejected, self.image_ocv)
-            
-    
-            # Get and print distance value in mm at the center of the image
-            # We measure the distance camera - object using Euclidean distance
-            
-            err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
-            #distance = 0
-            if math.isfinite(point_cloud_value[2]):
-                detected = Bool()
-                if self.contador >= 2:
-                    detected.data = True
-                    self.found.publish(detected)
-                    self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
-                                        point_cloud_value[1] * point_cloud_value[1] +
-                                        point_cloud_value[2] * point_cloud_value[2])
-                    print(f"Distance to Aruco at {{{self.x};{self.y}}}: {self.distance}")
-                    print(f"Contador: {self.contador}")
-                    
-                    self.x_zed = round(self.image.get_width() / 2)
-                    self.y_zed = round(self.image.get_height() / 2)
-                    cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
-                    
-                    print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
-                    
-                    self.CA.distance = self.distance
-                    self.CA.x = self.x - self.x_zed
-                    if self.x > (self.x_zed+20):
-                        print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
-                        self.CA.detected = False
-                    elif self.x < (self.x_zed-20):
-                        print(f"Aruco a la izquierda por: {self.x - self.x_zed} pixeles")
-                        self.CA.detected = False
-                    elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
-                        print(f"Aruco al centro")
-                        cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                        self.CA.detected = True
-                    self.center_approach.publish(self.CA)
-                else:
-                    self.distance=None
-                    print("Not detected ",self.aruco_dis)
+        if self.state == 4:
+
+            if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+                # Retrieve left image
+                self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+                self.image_ocv = self.image.get_data()
+                # Retrieve depth map. Depth is aligned on the left image
+                self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
+                self.depth_ocv = self.depth.get_data()
+                # Retrieve colored point cloud. Point cloud is aligned on the left image.
+                self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
+        
+                grayimg = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGR2GRAY)
+                #grayimgD = cv2.cvtColor(depth_ocv, cv2.COLOR_BGR2GRAY)
+                corners, ids, rejected = cv2.aruco.detectMarkers(grayimg, self.arucoDict, parameters=self.arucoParams)
+                detected_markers = self.aruco_display(corners, ids, rejected, self.image_ocv)
+                
+        
+                # Get and print distance value in mm at the center of the image
+                # We measure the distance camera - object using Euclidean distance
+                
+                err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
+                #distance = 0
+                if math.isfinite(point_cloud_value[2]):
+                    detected = Bool()
+                    if self.contador >= 2:
+                        detected.data = True
+                        self.found.publish(detected)
+                        self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
+                                            point_cloud_value[1] * point_cloud_value[1] +
+                                            point_cloud_value[2] * point_cloud_value[2])
+                        print(f"Distance to Aruco at {{{self.x};{self.y}}}: {self.distance}")
+                        print(f"Contador: {self.contador}")
+                        
+                        self.x_zed = round(self.image.get_width() / 2)
+                        self.y_zed = round(self.image.get_height() / 2)
+                        cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
+                        
+                        print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+                        
+                        self.CA.distance = self.distance
+                        self.CA.x = self.x - self.x_zed
+                        if self.x > (self.x_zed+20):
+                            print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
+                            self.CA.detected = False
+                        elif self.x < (self.x_zed-20):
+                            print(f"Aruco a la izquierda por: {self.x - self.x_zed} pixeles")
+                            self.CA.detected = False
+                        elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+                            print(f"Aruco al centro")
+                            cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                            self.CA.detected = True
+                        self.center_approach.publish(self.CA)
+                    else:
+                        self.distance=None
+                        print("Not detected ",self.aruco_dis)
 
             cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
             self.cv2_to_imgmsg(detected_markers)
             self.publisher_.publish(self.cv2_to_imgmsg(detected_markers))
             self.get_logger().info("Publicando video")
-            
+        value = Int8()
+        value.data = -1
+        self.state_pub.publish(value)
+        time.sleep(2)
+
 def main(args=None):
 	rclpy.init(args=args)
 	detect = Detect()
