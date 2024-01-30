@@ -31,7 +31,7 @@ class Detect_Object(Node):
         self.distance = None
         self.posicion = ""
         self.contador = 0
-        self.orange_dis_dis = False
+        self.orange_dis = False
         self.is_center = False
 
         self.zed = sl.Camera()
