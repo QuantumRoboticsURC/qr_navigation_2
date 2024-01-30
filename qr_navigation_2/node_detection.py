@@ -236,14 +236,13 @@ class Detections(Node):
 
                     cv2.putText(self.image_ocv, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-
                     err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
                     #distance = 0
                     if math.isfinite(point_cloud_value[2]):
                         detected = Bool()
                         if self.contador >= 2:
                             detected.data = True
-                            self.found.publish(detected)
+                            self.found_orange.publish(detected)
                             self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
                                                 point_cloud_value[1] * point_cloud_value[1] +
                                                 point_cloud_value[2] * point_cloud_value[2])
@@ -283,8 +282,8 @@ class Detections(Node):
                     self.cv2_to_imgmsg(detected_orange)
                     self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
                     self.get_logger().info("Publicando video sin deteccion")
-        elif self.state == 4:
 
+        elif self.state == 4:
             if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
                 # Retrieve left image
                 self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
@@ -300,7 +299,6 @@ class Detections(Node):
                 corners, ids, rejected = cv2.aruco.detectMarkers(grayimg, self.arucoDict, parameters=self.arucoParams)
                 detected_markers = self.aruco_display(corners, ids, rejected, self.image_ocv)
                 
-        
                 # Get and print distance value in mm at the center of the image
                 # We measure the distance camera - object using Euclidean distance
                 
