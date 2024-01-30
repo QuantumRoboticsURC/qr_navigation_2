@@ -86,7 +86,7 @@ class Detect_Bottle(Node):
         return frame
 
     def cv2_to_imgmsg(self, image):
-        msg = self.bridge.cv2_to_imgmsg(image, encoding='bgr8')
+        msg = self.bridge.cv2_to_imgmsg(image, encoding='bgra8')
         return msg
 
     def detect(self):
