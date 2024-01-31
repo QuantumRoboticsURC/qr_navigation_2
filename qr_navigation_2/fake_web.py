@@ -5,7 +5,7 @@ from std_msgs.msg import Int32
 class WebNode(Node):
     def __init__(self):
         super().__init__('web_node')
-        self.publisher_ = self.create_publisher(Int32, 'target_type', 10)
+        self.publisher_ = self.create_publisher(Int32, 'state', 10)
         self.timer = self.create_timer(2.0, self.request_target_type)
 
     def request_target_type(self):

@@ -9,8 +9,8 @@ class Center_approach(Node):
         super().__init__("center")
         self.create_subscription(CA, "center_approach", self.callback,10)
         self.create_subscription(Bool, "detected_aruco", self.aruco, 1)
-        self.create_subscription(Bool, "arrived_ca", self.arrived_ca_callback, 10)
-        self.cmd_vel_ca = self.create_publisher(Twist, "cmd_vel_ca", 10)
+        self.arrived = self.create_publisher(Bool, "arrived_ca", 10)
+        self.cmd_vel_ca = self.create_publisher(Twist, "cmd_vel", 10)
         self.Twist = Twist()
         
         self.vel_x = 0.16
@@ -39,8 +39,12 @@ class Center_approach(Node):
             self.Twist.angular.z = 0.0
             self.found = False
             self.arrived_ca = True
+            self
             print("Terminado")
-
+            arrived = Bool()
+            arrived.data = True
+            self.arrived.publish(arrived)
+        
         self.cmd_vel_ca.publish(self.Twist) 
 
     def get_aruco(self):

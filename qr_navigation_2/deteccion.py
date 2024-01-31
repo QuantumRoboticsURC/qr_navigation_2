@@ -35,6 +35,7 @@ class Detect(Node):
         self.contador = 0
         self.aruco_dis = False
         self.is_center = False
+        self.state = -1
 
         self.ARUCO_DICT = {
             "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -132,7 +133,7 @@ class Detect(Node):
         return msg
     
     def update_state(self, msg):
-        self.state_pub = msg.data
+        self.state = msg.data
 
     def detect(self):
         if self.state == 4:

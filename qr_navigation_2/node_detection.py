@@ -341,10 +341,11 @@ class Detections(Node):
             self.cv2_to_imgmsg(detected_markers)
             self.publisher_.publish(self.cv2_to_imgmsg(detected_markers))
             self.get_logger().info("Publicando video")
-        value = Int8()
-        value.data = -1
-        self.state_pub.publish(value)
-        time.sleep(2)
+        else:
+            value = Int8()
+            value.data = -1
+            self.state_pub.publish(value)
+            time.sleep(2)
 
 def main(args=None):
 	rclpy.init(args=args)

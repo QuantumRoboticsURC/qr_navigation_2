@@ -1,16 +1,17 @@
 import rclpy
+import argparse
 from rclpy.node import Node
 from std_msgs.msg import Bool, Float64, Header
-from geometry_msgs.msg import Image
+from geometry_msgs.msg import Twist,Point
+from sensor_msgs.msg import Image
 from custom_interfaces.msg import CA
-from cv_bridge import CvBridge
 import pyzed.sl as sl
+from cv_bridge import CvBridge
 import numpy as np
 import time
 import cv2
 import math
 from ultralytics import YOLO
-import logging
 
 
 class Detect_Bottle(Node):
@@ -23,9 +24,14 @@ class Detect_Bottle(Node):
         self.CA = CA()
         self.bridge = CvBridge()
 
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--svo', type=str, default=None, help='optional svo file')
+        args = parser.parse_args()
+
         self.vel_x = 0.33
         self.vel_y = 0
         self.vel_theta = 0.1
+        self.model = YOLO("yolov8m.pt")
 
         self.x = 0
         self.y = 0
@@ -37,11 +43,16 @@ class Detect_Bottle(Node):
 
         self.zed = sl.Camera()
 
-        logging.getLogger('ultralytics').setLevel(logging.CRITICAL)
+        input_type = sl.InputType()
+        if args.svo is not None:
+            input_type.set_from_svo_file(args.svo)
 
         # Crear un objeto InitParameters y establecer parámetros de configuración
-        self.init_params = sl.InitParameters()
+        self.init_params = sl.InitParameters(input_t=input_type, svo_real_time_mode=True)
+        self.init_params.coordinate_units = sl.UNIT.METER
         self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Usar modo de profundidad ULTRA
+        self.init_params.coordinate_system = sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP
+
         self.init_params.coordinate_units = sl.UNIT.MILLIMETER  # Usar unidades de milímetros (para medidas de profundidad)
 
         # Abrir la cámara ZED
@@ -50,12 +61,19 @@ class Detect_Bottle(Node):
             print("Camera Open: " + repr(status) + ". Exit program.")
             exit()
 
+        # Create and set RuntimeParameters after opening the camera
         self.runtime_parameters = sl.RuntimeParameters()
-        self.image_zed = sl.Mat()
+
+        self.image = sl.Mat()
+        self.depth = sl.Mat()
         self.point_cloud = sl.Mat()
 
-        self.cap = cv2.VideoCapture(0)
-        self.model = YOLO("yolov8m.pt")
+        self.image_ocv = self.image.get_data()
+        self.image_ocv = self.image_ocv[:,:-1]
+        self.depth_ocv = self.image.get_data()
+
+        self.mirror_ref = sl.Transform()
+        self.mirror_ref.set_translation(sl.Translation(2.75, 4.0, 0))
 
         self.timer = self.create_timer(0.001, self.detect)
 
@@ -86,29 +104,30 @@ class Detect_Bottle(Node):
         return frame
 
     def cv2_to_imgmsg(self, image):
-        msg = self.bridge.cv2_to_imgmsg(image, encoding='bgra8')
+        msg = self.bridge.cv2_to_imgmsg(image, encoding='bgr8')
         return msg
 
     def detect(self):
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Recuperar la imagen izquierda
-            self.zed.retrieve_image(self.image_zed, sl.VIEW.LEFT)
-            image_zed_ocv = self.image_zed.get_data()
+            self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+            self.image_ocv = self.image.get_data()
+            self.image_col = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGRA2RGB)
 
             # Recuperar el mapa de profundidad. La profundidad está alineada en la imagen izquierda.
             self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
 
-            results = self.model(image_zed_ocv)
+            results = self.model(self.image_col)
 
             result = results[0]
             bboxes = np.array(result.boxes.xyxy.cpu(), dtype="int")
             classes = np.array(result.boxes.cls.cpu(), dtype="int")
 
-            detected_bottle = self.bottle_display(image_zed_ocv, bboxes, classes)
+            detected_bottle = self.bottle_display(self.image_col, bboxes, classes)
 
             if bboxes.any():
 
-                ht, wd = image_zed_ocv.shape[:2]
+                ht, wd = self.image_col.shape[:2]
 
                 # Encontrar el contorno más grande
                 max_bbox = max(bboxes, key=lambda box: (box[2] - box[0]) * (box[3] - box[1]))
@@ -131,9 +150,9 @@ class Detect_Bottle(Node):
                     print("Centrado")
 
                 # Dibujar un rectángulo alrededor de la botella
-                cv2.rectangle(image_zed_ocv, (max_bbox[0], max_bbox[1]), (max_bbox[2], max_bbox[3]), (0, 255, 0), 2)
+                cv2.rectangle(self.image_col, (max_bbox[0], max_bbox[1]), (max_bbox[2], max_bbox[3]), (0, 255, 0), 2)
 
-                cv2.putText(image_zed_ocv, 'Botella', (max_bbox[0], max_bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+                cv2.putText(self.image_col, 'Botella', (max_bbox[0], max_bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
                             (0, 255, 0), 2)
 
                 # Publicar información sobre la botella detectada

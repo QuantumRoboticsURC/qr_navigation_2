@@ -4,12 +4,16 @@ from rclpy.node import Node
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 from custom_interfaces.msg import CA
-from cv_bridge import CvBridge
-from ultralytics import YOLO
-import numpy as np
 import pyzed.sl as sl
-import math
+from cv_bridge import CvBridge
 
+from PIL import Image as im 
+
+import numpy as np
+import math
+import scipy.misc
+
+from ultralytics import YOLO
 class DetectObject(Node):
 
     def __init__(self):
@@ -22,12 +26,42 @@ class DetectObject(Node):
         self.x = 0.0
         self.y = 0.0
         self.model = YOLO("yolov8m.pt")
+        self.zed = sl.Camera()
+
+        # Create a InitParameters object and set configuration parameters
+        self.init_params = sl.InitParameters()
+        self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Use ULTRA depth mode
+        self.init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
+
+        # Open the camera
+        status = self.zed.open(self.init_params)
+        if status != sl.ERROR_CODE.SUCCESS: #Ensure the camera has opened succesfully
+            print("Camera Open : "+repr(status)+". Exit program.")
+            exit()
+
+        # Create and set RuntimeParameters after opening the camera
+        self.runtime_parameters = sl.RuntimeParameters()
+        self.image = sl.Mat()
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.depth = sl.Mat()
+        self.point_cloud = sl.Mat()
+        self.image_ocv = self.image.get_data()
+        self.image_ocv = self.image_ocv[:,:-1]
+        self.depth_ocv = self.image.get_data()
+        
+        self.mirror_ref = sl.Transform()
+        self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
+        
+        self.timer = self.create_timer(0.01,self.detect)
 
     def cv2_to_imgmsg(self, image):
         msg = self.bridge.cv2_to_imgmsg(image, encoding='bgra8')
         return msg
 
     def detect_object(self, frame):
+        frame = np.asarray(frame)
+        frame = im.fromarray(frame, "RGB")
         results = self.model(frame)
         result = results[0]
         bboxes = np.array(result.boxes.xyxy.cpu(), dtype="int")
@@ -58,32 +92,9 @@ class DetectObject(Node):
 
         return frame, object_detected
     def detect(self):
-        self.zed = sl.Camera()
 
-        # Create a InitParameters object and set configuration parameters
-        self.init_params = sl.InitParameters()
-        self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Use ULTRA depth mode
-        self.init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
+        
 
-        # Open the camera
-        status = self.zed.open(self.init_params)
-        if status != sl.ERROR_CODE.SUCCESS: #Ensure the camera has opened succesfully
-            print("Camera Open : "+repr(status)+". Exit program.")
-            exit()
-
-        # Create and set RuntimeParameters after opening the camera
-        self.runtime_parameters = sl.RuntimeParameters()
-        self.image = sl.Mat()
-        self.depth = sl.Mat()
-        self.point_cloud = sl.Mat()
-        
-        self.image_ocv = self.image.get_data()
-        self.image_ocv = self.image_ocv[:,:-1]
-        self.depth_ocv = self.image.get_data()
-        
-        self.mirror_ref = sl.Transform()
-        self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
-        
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Retrieve left image
             self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
@@ -94,18 +105,13 @@ class DetectObject(Node):
             # Retrieve colored point cloud. Point cloud is aligned on the left image.
             self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
     
-            grayimg = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGR2GRAY)
-            #grayimgD = cv2.cvtColor(depth_ocv, cv2.COLOR_BGR2GRAY)
-            corners, ids, rejected = cv2.aruco.detectMarkers(grayimg, self.arucoDict, parameters=self.arucoParams)
-            detected_markers = self.aruco_display(corners, ids, rejected, self.image_ocv)
-            
     
             # Get and print distance value in mm at the center of the image
             # We measure the distance camera - object using Euclidean distance
-            
+            self.image_ocv,self.detected = self.detect_object(self.image_callback)
             err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
             #distance = 0
-            self.image_ocv,self.detected = self.detect_object(self.image_callback)
+            
             if math.isfinite(point_cloud_value[2]):
                 self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
                                     point_cloud_value[1] * point_cloud_value[1] +
