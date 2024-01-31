@@ -9,6 +9,7 @@ class Center_approach(Node):
         super().__init__("center")
         self.create_subscription(CA, "center_approach", self.callback,10)
         self.create_subscription(Bool, "detected_aruco", self.aruco, 1)
+        self.create_subscription(Bool,"detected_orange",self.orange,1)
         self.arrived = self.create_publisher(Bool, "arrived_ca", 10)
         self.cmd_vel_ca = self.create_publisher(Twist, "cmd_vel", 10)
         self.state_pub = self.create_publisher(Int8,"/state",1)
@@ -29,6 +30,8 @@ class Center_approach(Node):
         self.center = msg.detected
         
     def aruco(self, msg): 
+        self.found = msg.data
+    def orange(self,msg):
         self.found = msg.data
         
     def approach(self):

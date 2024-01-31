@@ -324,6 +324,7 @@ class Detections(Node):
                         
                         self.CA.distance = self.distance
                         self.CA.x = self.x - self.x_zed
+
                         if self.x > (self.x_zed+20):
                             print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
                             self.CA.detected = False
@@ -334,6 +335,7 @@ class Detections(Node):
                             print(f"Aruco al centro")
                             cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                             self.CA.detected = True
+                            
                         self.center_approach.publish(self.CA)
                     else:
                         self.distance=None
