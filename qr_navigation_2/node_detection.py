@@ -37,6 +37,7 @@ class Detections(Node):
         self.aruco_dis = False
         self.orange_dis = False
         self.is_center = False
+        self.state = -1
 
         self.ARUCO_DICT = {
             "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -162,7 +163,7 @@ class Detections(Node):
         return msg
     
     def update_state(self, msg):
-        self.state_pub = msg.data
+        self.state = msg.data
 
     def contornos(self, image):
 
@@ -323,6 +324,7 @@ class Detections(Node):
                         
                         self.CA.distance = self.distance
                         self.CA.x = self.x - self.x_zed
+
                         if self.x > (self.x_zed+20):
                             print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
                             self.CA.detected = False
@@ -333,6 +335,7 @@ class Detections(Node):
                             print(f"Aruco al centro")
                             cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                             self.CA.detected = True
+                            
                         self.center_approach.publish(self.CA)
                     else:
                         self.distance=None
