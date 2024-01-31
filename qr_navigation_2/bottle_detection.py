@@ -85,8 +85,10 @@ class Detect_Bottle(Node):
                 if cls == 39:
                     (x, y, x2, y2) = bbox
 
-                    cv2.rectangle(frame, (x, y), (x2, y2), (0, 0, 225), 2)
-                    cv2.putText(frame, "plastic_bottle", (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 225), 2)
+                    # Dibujar un rectángulo alrededor de la botella
+                    cv2.rectangle(frame, (x, y), (x2, y2), (0, 255, 0), 2)
+
+                    cv2.putText(frame, 'Botella', (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
                     cx = int(x + (x2 - x) / 2.0)
                     cy = int(y + (y2 - y) / 2.0)
