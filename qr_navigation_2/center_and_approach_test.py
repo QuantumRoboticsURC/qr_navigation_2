@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool, Int32, Header, Float64
+from std_msgs.msg import Bool, Int32, Header, Float64,Int8
 from geometry_msgs.msg import Twist
 from custom_interfaces.msg import CA
 
@@ -11,6 +11,7 @@ class Center_approach(Node):
         self.create_subscription(Bool, "detected_aruco", self.aruco, 1)
         self.arrived = self.create_publisher(Bool, "arrived_ca", 10)
         self.cmd_vel_ca = self.create_publisher(Twist, "cmd_vel", 10)
+        self.state_pub = self.create_publisher(Int8,"/state",1)
         self.Twist = Twist()
         
         self.vel_x = 0.16
@@ -31,7 +32,7 @@ class Center_approach(Node):
         self.found = msg.data
         
     def approach(self):
-        if (self.distance > 2000):
+        if (self.distance > 1000):
             self.Twist.linear.x = self.vel_x
             self.Twist.angular.z = 0.0
         else:
@@ -39,10 +40,12 @@ class Center_approach(Node):
             self.Twist.angular.z = 0.0
             self.found = False
             self.arrived_ca = True
-            self
             print("Terminado")
             arrived = Bool()
             arrived.data = True
+            state = Int8()
+            state.data = -1
+            self.state_pub.publish(state)
             self.arrived.publish(arrived)
         
         self.cmd_vel_ca.publish(self.Twist) 
@@ -52,7 +55,6 @@ class Center_approach(Node):
             if (self.center):
                 self.approach()
                 print("Centro")
-
             elif (self.x < 0):
                 self.Twist.linear.x = 0.0
                 self.Twist.angular.z = self.vel_theta
