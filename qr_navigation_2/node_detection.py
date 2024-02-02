@@ -88,6 +88,7 @@ class Detections(Node):
 		self.image_ocv = self.image.get_data()
 		self.image_ocv = self.image_ocv[:,:-1]
 		self.depth_ocv = self.image.get_data()
+		self.quality = 18
 		
 		self.mirror_ref = sl.Transform()
 		self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
@@ -283,13 +284,12 @@ class Detections(Node):
 
 					cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 					cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-					self.cv2_to_imgmsg(detected_orange)
-					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
+					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange, self.quality))
 					self.get_logger().info("Publicando video")
 				
 				else:      
 					self.cv2_to_imgmsg(detected_orange)
-					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
+					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange, self.quality))
 					self.get_logger().info("Publicando video sin deteccion")
 
 		elif self.state == 4:
@@ -349,7 +349,7 @@ class Detections(Node):
 						self.distance=None
 						print("Not detected ",self.aruco_dis)
 			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, 50))
+			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
 			self.get_logger().info("Publicando video")
 
 def main(args=None):

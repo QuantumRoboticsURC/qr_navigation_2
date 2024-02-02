@@ -5,7 +5,7 @@ from std_msgs.msg import Int8
 class WebNode(Node):
     def __init__(self):
         super().__init__('web_node')
-        self.publisher_ = self.create_publisher(Int8, 'state', 10)
+        self.publisher_ = self.create_publisher(Int8, 'state', 1)
         self.timer = self.create_timer(2.0, self.request_target_type)
 
     def request_target_type(self):
@@ -29,8 +29,7 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-         
-   
+
         
         
     

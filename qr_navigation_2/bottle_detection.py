@@ -74,7 +74,7 @@ class Detect_Bottle(Node):
         self.mirror_ref = sl.Transform()
         self.mirror_ref.set_translation(sl.Translation(2.75, 4.0, 0))
 
-        self.timer = self.create_timer(0.001, self.detect)
+        self.timer = self.create_timer(1e-90, self.detect)
 
     def bottle_display(self, frame, bboxes, classes):
         if bboxes.any():
@@ -106,6 +106,14 @@ class Detect_Bottle(Node):
 
     def cv2_to_imgmsg(self, image):
         msg = self.bridge.cv2_to_imgmsg(image, encoding='bgr8')
+        return msg
+
+    def cv2_to_imgmsg_resized(self, frame, scale_percent):
+        widht = int(frame.shape[1] * scale_percent / 100)
+        height = int(frame.shape[0] * scale_percent / 100)
+        dim = (widht, height)
+        resized_image = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
+        msg = self.bridge.cv2_to_imgmsg(resized_image, encoding = "bgr8")
         return msg
 
     def detect(self):
@@ -194,27 +202,24 @@ class Detect_Bottle(Node):
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                         cv2.putText(detected_bottle, f"Posicion: {self.posicion}", (max_bbox[0], max_bbox[1] - 37),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                        self.cv2_to_imgmsg(detected_bottle)
-                        self.publisher_.publish(self.cv2_to_imgmsg(detected_bottle))
+                        self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_bottle, 30))
                         self.get_logger().info("Publicando video")
 
+                    else:
+                        self.distance = None
+                        print("Not detected ", self.bottle_dis)
+                        self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_bottle, 30))
+                        self.get_logger().info("Publicando video sin deteccion")
+
             else:
-                self.distance = None
-                print("Not detected ", self.bottle_dis)
-
-                self.cv2_to_imgmsg(detected_bottle)
-                self.publisher_.publish(self.cv2_to_imgmsg(detected_bottle))
+                self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_bottle, 30))
                 self.get_logger().info("Publicando video sin deteccion")
-
-        else:
-            self.cv2_to_imgmsg(detected_bottle)
-            self.publisher_.publish(self.cv2_to_imgmsg(detected_bottle))
-            self.get_logger().info("Publicando video sin deteccion")
 
 def main(args=None):
     rclpy.init(args=args)
     detect = Detect_Bottle()
     rclpy.spin(detect)
+    detect.zed.close()
     detect.destroy_node()
     rclpy.shutdown()
 
