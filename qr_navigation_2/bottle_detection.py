@@ -30,7 +30,7 @@ class Detect_Bottle(Node):
         self.vel_x = 0.33
         self.vel_y = 0
         self.vel_theta = 0.1
-        self.model = YOLO("yolov8m.pt")
+        self.model = YOLO("yolov8n.pt")
 
         self.x = 0
         self.y = 0
