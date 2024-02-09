@@ -68,7 +68,7 @@ class Detections(Node):
 		
 		self.zed = sl.Camera()
 
-		self.quality = 18  # Se mantiene como lo tenías
+		self.quality = 18  
 		self.create_subscription(Int8, "image_quality", self.quality_callback, 1)
 
 
