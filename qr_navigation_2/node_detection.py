@@ -68,6 +68,10 @@ class Detections(Node):
 		
 		self.zed = sl.Camera()
 
+		self.quality = 18  # Se mantiene como lo tenías
+		self.create_subscription(Int8, "image_quality", self.quality_callback, 1)
+
+
 		# Create a InitParameters object and set configuration parameters
 		self.init_params = sl.InitParameters()
 		self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Use ULTRA depth mode
@@ -158,7 +162,11 @@ class Detections(Node):
 			self.aruco_dis=False
 			self.contador=0       
 		return image
-	
+
+  # Listener de calidad de Imagen
+	def quality_callback(self, msg):
+		self.quality = msg.data
+
 	def cv2_to_imgmsg(self, image):
 		msg = self.bridge.cv2_to_imgmsg(image, encoding = "bgra8")
 		return msg
