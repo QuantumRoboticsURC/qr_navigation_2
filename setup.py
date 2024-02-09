@@ -25,7 +25,8 @@ setup(
                             'center_approach=qr_navigation_2.center_and_approach_test:main',
                             'orange_detection=qr_navigation_2.orange_ros2:main',
                             'bottle=qr_navigation_2.bottle_detection:main','bottle_ros2=qr_navigation_2.bottle_detection_test:main',
-                            'node_detection_ros2=qr_navigation_2.node_detection:main'
+                            'node_detection_ros2=qr_navigation_2.node_detection:main',
+                            'web_inter = qr_navigation_2.intermediary_web:main'
         ],
     },
 )
