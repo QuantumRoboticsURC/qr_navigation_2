@@ -87,8 +87,8 @@ class Follow_GPS(Node):
 		quat = msg.orientation
 		angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
 		self.angle = (angle_z+2*math.pi)%(2*math.pi)
-		self.angle += math.pi
-		self.angle = (angle_z+2*math.pi)%(2*math.pi)
+		#self.angle += math.pi
+		#self.angle = (angle_z+2*math.pi)%(2*math.pi)
 
 
 	def followGPS2(self):

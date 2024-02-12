@@ -11,7 +11,7 @@ class NodeController(Node):
 		# Suscripciones
 		self.create_subscription(Twist, 'cmd_vel_ca', self.cmd_vel_ca_callback, 10)
 		self.create_subscription(Bool, 'arrived_ca', self.arrived_ca_callback, 10)
-		self.s = self.create_subscription(Int32, 'target_type', self.target_type_callback, 10)
+		self.s = self.create_subscription(Int8, 'target_type', self.target_type_callback, 10)
 		self.create_subscription(Twist, 'cmd_vel_fg', self.cmd_vel_fg_callback, 10)
 		self.test = self.create_subscription(Bool, 'arrived_fg', self.arrived_fg_callback, 10)
 		self.create_subscription(Bool, 'arrived_sr', self.arrived_sr_callback, 10)
@@ -21,13 +21,13 @@ class NodeController(Node):
 		# Publicadores
 		self.pub_arrived = self.create_publisher(Bool, 'arrived', 10)
 		self.pub_cmd_vel = self.create_publisher(Twist, 'cmd_vel', 10)
-		self.pub_state = self.create_publisher(Int32, 'state', 10)
+		self.pub_state = self.create_publisher(Int8, 'state', 10)
 		self.pub_go = self.create_publisher(Bool, '/go', 10)
 
 		# Variables de estado
 		self.arrived = False
 		self.cmd_vel = Twist()
-		self.state = Int32()
+		self.state = Int8()
 		self.start = False
 
 		# Contenedores
@@ -102,6 +102,7 @@ class NodeController(Node):
 			arrived_msg = Bool()
 			arrived_msg.data = True
 			if self.target_function == "gps_only":
+				print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 				self.pub_arrived.publish(arrived_msg)
 				print(f"Finished {self.target_function}")
 				self.target_function=""
@@ -112,6 +113,9 @@ class NodeController(Node):
 				self.pub_state.publish(self.state)
 				print (f"{self.state.data}")
 			elif self.target_function == "gps_aruco" and self.state.data==4:
+				print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+				self.pub_arrived.publish(arrived_msg)
+				print(f"Finished {self.target_function}")
 				self.target_function=""
 				self.start = False
 				print("Finished gps_aruco")
@@ -138,9 +142,13 @@ class NodeController(Node):
 		print("Self.arrived: ",self.arrived)
 
 	def controller(self):
+		
 		if self.start is True:
+			arrive_msg=Bool()
+			arrive_msg.data=False
+			self.pub_arrived.publish(arrive_msg)
 			print(f"Received start signal. Target function: {self.target_function}")
-
+			
 			if self.target_function == "gps_only":
 				print("Performing actions for target function 'gps_only'")
 				self.pub_state.publish(self.state)
