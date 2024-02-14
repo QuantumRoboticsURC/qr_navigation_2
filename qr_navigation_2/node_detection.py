@@ -18,6 +18,7 @@ class Detections(Node):
 		super().__init__("Detection_node")
 		self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
 		self.center_approach = self.create_publisher(CA,"center_approach",10)
+		self.obstacle = self.create_publisher(Bool,"object_detected",1)
 		self.twist = Twist()
 		self.found_aruco = self.create_publisher(Bool, "detected_aruco", 1)
 		self.found_orange = self.create_publisher(Bool, "detected_orange", 1)
@@ -359,6 +360,34 @@ class Detections(Node):
 			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
 			self.get_logger().info("Publicando video")
+		else:
+			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				# Retrieve left image
+				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+				self.image_ocv = self.image.get_data()
+				# Retrieve depth map. Depth is aligned on the left image
+				self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
+				self.depth_ocv = self.depth.get_data()
+				# Retrieve colored point cloud. Point cloud is aligned on the left image.
+				self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
+				self.x_zed = round(self.image.get_width() / 2)
+				self.y_zed = round(self.image.get_height() / 2)
+				err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
+				#distance = 0
+				if math.isfinite(point_cloud_value[2]):
+					detected.data = True
+					self.found_orange.publish(detected)
+					self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
+										point_cloud_value[1] * point_cloud_value[1] +
+										point_cloud_value[2] * point_cloud_value[2])
+					if(self.distance<500):
+						object = Bool()
+						object.data = True
+						self.obstacle.publish(object)
+						
+				self.publisher_.publish(self.cv2_to_imgmsg_resized(self.image_ocv, self.quality))	
+						
+
 
 def main(args=None):
 	rclpy.init(args=args)
