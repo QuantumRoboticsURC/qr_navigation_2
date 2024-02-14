@@ -360,7 +360,8 @@ class Detections(Node):
 			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
 			self.get_logger().info("Publicando video")
-		else:
+		
+		elif self.state==0:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 				# Retrieve left image
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
@@ -372,7 +373,7 @@ class Detections(Node):
 				self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
 				self.x_zed = round(self.image.get_width() / 2)
 				self.y_zed = round(self.image.get_height() / 2)
-				err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
+				err, point_cloud_value = self.point_cloud.get_value(self.x_zed, self.y_zed)
 				#distance = 0
 				if math.isfinite(point_cloud_value[2]):
 					detected.data = True
