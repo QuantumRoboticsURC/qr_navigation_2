@@ -28,7 +28,7 @@ class Obstacle_evasion_test_2(Node):
         self.cmd_vel = self.create_publisher(Twist, 'cmd_vel_fg', 10)
         self.imu = self.create_subscription(Imu, "/bno055/imu", self.callback, 10)
 
-        zed = sl.camera()
+        self.zed = sl.camera()
         self.twist = Twist()
         self.linear_velocity = 0.16
         self.angular_velocity = 0.1
@@ -39,52 +39,61 @@ class Obstacle_evasion_test_2(Node):
         init_params.coordinate_units = sl.UNIT.METER
         init_params.camera_resolution = sl.RESOLUTION.HD1080
 
-        status = zed.open(init_params)
+        status = self.zed.open(init_params)
         if status != sl.ERROR_CODE.SUCCESS:
             print("Camera Open: " + repr(status) + ". Exit program.")
             exit()
+        self.runtime_parameters = sl.RuntimeParameters()
+        self.runtime_parameters.sensing_mode = sl.SENSING_MODE.STANDARD
+        self.runtime_parameters.confindence_threshold = 100
+        self.runtime_parameters.textureness_confidence_threshold = 100
 
-        runtime_parameters = sl.RuntimeParameters()
-        runtime_parameters.sensing_mode = sl.SENSING_MODE.STANDARD
-        runtime_parameters.confindence_threshold = 100
-        runtime_parameters.textureness_confidence_threshold = 100
+        self.image = sl.Mat()
+        self.depth = sl.Mat()
+        self.point_cloud = sl.Mat()
 
-        i = 0
-        image = sl.Mat()
-        depth = sl.Mat()
-        point_cloud = sl.Mat()
+        self.mirror_ref = sl.Transform()
+        self.mirror_ref.set_translation(sl.Translation(2.75, 4.0, 0))
+        self.tr_np = self.mirror_ref.m
 
-        mirror_ref = sl.Transform()
-        mirror_ref.set_translation(sl.Translation(2.75, 4.0, 0))
-        tr_np = mirror_ref.m
+        self.time = self.create_timer(0.0001,self.self.timer)
+        
+        
+    def timer(self):
+
 
         while True:
-            if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
-                zed.retrieve_image(image, sl.VIEW_LEFT)
-                zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
-                zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
+            if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+                self.zed.retrieve_image(self.image, sl.VIEW_LEFT)
+                self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
+                self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
 
-                x = round(image.get_width()/2)
-                y = round(image.get_height()/2)
+                self.x = round(self.image.get_width()/2)
+                self.y = round(self.image.get_height()/2)
 
-                err, point_cloud_value = point_cloud.get_value(x, y)
+                err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
 
                 distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
                                         point_cloud_value[1] * point_cloud_value[1] +
                                         point_cloud_value[2] * point_cloud_value[2])
                 
-                point_cloud_np = point_cloud.get_data()
-                point_cloud_np.dot(tr_np)
+                point_cloud_np = self.point_cloud.get_data()
+                point_cloud_np.dot(self.tr_np)
 
                 distance_f = float(distance)
 
                 if distance_f < 0.5:
+                    
                     self.twist.linear.x = 10
                     self.twist.linear.y = 10
                     self.cmd_vel.publish(self.twist)
-                else:
-                    quat = Quaternion()
-                    quat = msg.orientation
+                
+                
+                quat = Quaternion()
+                quat = msg.orientation
+
+                
+            
 
 
     

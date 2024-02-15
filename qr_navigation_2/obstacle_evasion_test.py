@@ -1,4 +1,4 @@
-import rclpy
+"""import rclpy
 import math
 import time
 import cv2
@@ -50,4 +50,4 @@ while True:
 
         if math.isfinite(point_cloud_value[2]):
             distance 
-
+"""
