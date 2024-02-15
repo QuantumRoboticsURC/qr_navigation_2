@@ -90,7 +90,25 @@ class Follow_GPS(Node):
 		#self.angle += math.pi
 		#self.angle = (angle_z+2*math.pi)%(2*math.pi)
 
+	def calc_angle(self):
+		dY = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.gps_coordinates[1])
+		dX = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.gps_coordinates[0],self.target_coordinates[1])
+		target_angle = (math.atan2(dY,dX)+2*math.pi)%(2*math.pi)
+		return target_angle
 
+	def angle_correction(self,target_angle):
+		if(self.angle>target_angle):
+			print(f"Target angle {target_angle} | current angle {self.angle}")
+			while(self.angle>target_angle):
+				self.twist.angular.z = -(abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+				self.cmd_vel.publish(self.twist)
+
+		else:
+			print(f"_Target angle {target_angle} | current angle {self.angle}")
+			while(self.angle<target_angle):
+				self.twist.angular.z = (abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+				self.cmd_vel.publish(self.twist)
+    
 	 
 	def followGPS2(self):
 		if(self.state==0 and self.target_coordinates[0] != None and self.target_coordinates[1] != None):
@@ -98,42 +116,32 @@ class Follow_GPS(Node):
 			state = Int8()
 			arrived = Bool()
 			
-			dY = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.gps_coordinates[1])
-			dX = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.gps_coordinates[0],self.target_coordinates[1])
-			
-			target_angle = (math.atan2(dY,dX)+2*math.pi)%(2*math.pi)
-			
-			if(self.angle>target_angle):
-				print(f"Target angle {target_angle} | current angle {self.angle}")
-				while(self.angle>target_angle):
-					self.twist.angular.z = -(abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-					self.cmd_vel.publish(self.twist)
+			target_angle = self.calc_angle()
 
-			else:
-				print(f"_Target angle {target_angle} | current angle {self.angle}")
-				while(self.angle<target_angle):
-
-					self.twist.angular.z = (abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-					self.cmd_vel.publish(self.twist)
+			self.angle_correction(target_angle)
+     
 			self.twist.angular.z=0.0
 			self.cmd_vel.publish(self.twist)
 			
 			distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
-			print(f"Prev= {math.atan2(dY,dX)}")
-			print(f"distance to x = {dX} | Distance to y= {dY} ")
-			print(f"Distance {distance}")
-			print(F"Distance cal = {np.sqrt(np.power(dX,2)+np.power(dY,2))}")
-			print(f"Current angle = {self.angle}")
-			time.sleep(3)
 
+
+			start_time = time.time()
 			while(distance>1.5):
-				distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
-				#self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (control - 0) + 0.08)
-				self.twist.linear.x = 0.16
-				self.cmd_vel.publish(self.twist)
+				current_time = time.time()
+				target_angle = self.calc_angle()
+				if((current_time-start_time)%30==0):
+					if(not (self.angle>target_angle-0.001 and self.angle<target_angle+0.001)):
+						self.angle_correction(target_angle)
+					else:
+						distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
+						if(distance <20):
+							self.twist.linear.x = (abs((distance - 0)) * (self.linear_velocity- 0.08) / (20 - 0) + 0.08)
+						else:
+							self.twist.linear.x = 0.16
+	
+						self.cmd_vel.publish(self.twist)
 				print(f"GPS = {self.gps_coordinates}")
-				print(f"distance to x = {dX} | Distance to y= {dY} ")
-				print(f"Distance {distance}")
 
 			self.twist.linear.x = 0.0
 			arrived.data=True
