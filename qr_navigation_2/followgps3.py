@@ -99,21 +99,22 @@ class Follow_GPS(Node):
 
 	def angle_correction(self,target_angle):
 		if(self.angle>target_angle):
-
+			self.twist.linear.x = 0.0
 			while(self.angle>target_angle):
 				self.twist.angular.z = -(abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
 
 		else:
+			self.twist.linear.x = 0.0
 			while(self.angle<target_angle):
 				self.twist.angular.z = (abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
-	
+		self.twist.angular.z=0.0
+		self.cmd_vel.publish(self.twist)
+
 	def check_coord_precision(self):
 		var = (self.gps_coordinates[0]>self.target_coordinates[0]-self.coordinate_error and self.gps_coordinates[0]<self.target_coordinates[0]+self.coordinate_error) and (self.gps_coordinates[1]>self.target_coordinates[1]-self.coordinate_error and self.gps_coordinates[1]<self.target_coordinates[1]+self.coordinate_error)
 		return var
-
-	 		
 	
 	def followGPS2(self):
 		if(self.state==0 and self.target_coordinates[0] != None and self.target_coordinates[1] != None):
@@ -122,13 +123,10 @@ class Follow_GPS(Node):
 			arrived = Bool()
 			
 			target_angle = self.calc_angle()
-
 			self.angle_correction(target_angle)
-	 
-			self.twist.angular.z=0.0
-			self.cmd_vel.publish(self.twist)
-			
+	
 			distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
+			
 			start_time = time.time()
 			WITHIN_RANGE = False
 	
@@ -154,6 +152,7 @@ class Follow_GPS(Node):
 			
 
 			self.twist.linear.x = 0.0
+			self.twist.angular.z = 0.0
 			arrived.data=True
 			state.data = -1
 
