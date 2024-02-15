@@ -141,7 +141,7 @@ class Follow_GPS(Node):
 							self.twist.linear.x = 0.16
 	
 						self.cmd_vel.publish(self.twist)
-				print(f"GPS = {self.gps_coordinates}")
+			
 
 			self.twist.linear.x = 0.0
 			arrived.data=True
