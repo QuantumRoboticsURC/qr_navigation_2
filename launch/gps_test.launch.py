@@ -11,7 +11,19 @@ def generate_launch_description():
         launch.actions.DeclareLaunchArgument(),
         Node(
             package='qr_navigation_2',
-            executable='test_gps',
-            name='test_gps'
+            executable='followGPS',
+            name='go_to_gps'
+        ),
+        Node(
+            package ='qr_navigation_2',
+            executable='center_approach',
+            name='center'
+        ),
+        Node(
+            
+            package='qr_navigation_2',
+            executable='controller',
+            name='node_controller'
         )
+        
     ])
