@@ -12,7 +12,8 @@ def generate_launch_description():
         Node(
             package='qr_navigation_2',
             executable='followGPS',
-            name='go_to_gps'
+            name='go_to_gps',
+            
         ),
         Node(
             package ='qr_navigation_2',
@@ -23,7 +24,8 @@ def generate_launch_description():
             
             package='qr_navigation_2',
             executable='controller',
-            name='node_controller'
+            name='node_controller',
+            output='screen'
         )
         
     ])
