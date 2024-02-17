@@ -1,15 +1,17 @@
 import rclpy
 import argparse
 from rclpy.node import Node
-from std_msgs.msg import Bool,Int8,Float64,Header,Int32
-from geometry_msgs.msg import Twist,Point
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from threading import Thread
+from std_msgs.msg import Bool,Int8
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from custom_interfaces.msg import CA
+import pyzed.sl as sl
 from cv_bridge import CvBridge
 import numpy as np
-import time
 import cv2
-import pyzed.sl as sl
 import math
 from ultralytics import YOLO
 
@@ -18,6 +20,8 @@ class Detections(Node):
    
 	def __init__(self):
 		super().__init__("Detection_node")
+		timer_group = MutuallyExclusiveCallbackGroup()
+		listener_group = ReentrantCallbackGroup()
 		self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
 		self.center_approach = self.create_publisher(CA,"center_approach",10)
 		self.obstacle = self.create_publisher(Bool,"object_detected",1)
@@ -28,7 +32,7 @@ class Detections(Node):
 		self.CA = CA()
 		self.bridge = CvBridge()
 		self.state_pub = self.create_publisher(Int8, "state", 1)
-		self.create_subscription(Int8, "state", self.update_state, 1)
+		self.create_subscription(Int8, "state", self.update_state, 1, callback_group=listener_group)
 
 		parser = argparse.ArgumentParser()
 		parser.add_argument('--svo', type=str, default=None, help='optional svo file')
@@ -115,7 +119,7 @@ class Detections(Node):
 
 		#self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
 
-		self.timer = self.create_timer(0.001,self.detect)
+		self.timer = self.create_timer(1e-90,self.detect, callback_group=timer_group)
 	
 	def orange_display(self, contours, image):
 
@@ -237,15 +241,15 @@ class Detections(Node):
 	
 	def update_state(self, msg):
 		self.state = msg.data
-
+		print(msg.data)
 	def contornos(self, image):
 
 		# Obtener los valores actuales de color
-		orange_low_hue = 4
-		orange_high_hue = 22
-		orange_low_saturation = 130
+		orange_low_hue = 6
+		orange_high_hue = 14
+		orange_low_saturation = 239
 		orange_high_saturation = 255
-		orange_low_value = 160
+		orange_low_value = 235
 		orange_high_value = 255
 
 		# Convertir el fotograma al espacio de color HSV
@@ -424,6 +428,7 @@ class Detections(Node):
 				# Retrieve depth map. Depth is aligned on the left image
 				self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
 				self.depth_ocv = self.depth.get_data()
+				self.image_col = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGRA2RGB)
 				# Retrieve colored point cloud. Point cloud is aligned on the left image.
 				self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
 
@@ -511,7 +516,7 @@ class Detections(Node):
 							print("Not detected ", self.bottle_dis)
 							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
 							self.get_logger().info("Publicando video sin deteccion")
-
+ 
 				else:
 					self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
 					self.get_logger().info("Publicando video sin deteccion")
@@ -531,12 +536,11 @@ class Detections(Node):
 				err, point_cloud_value = self.point_cloud.get_value(self.x_zed, self.y_zed)
 				#distance = 0
 				if math.isfinite(point_cloud_value[2]):
-					detected.data = True
-					self.found_orange.publish(detected)
 					self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 										point_cloud_value[1] * point_cloud_value[1] +
 										point_cloud_value[2] * point_cloud_value[2])
-					if(self.distance<500):
+					print(self.distance)
+					if(self.distance<650):
 						object = Bool()
 						object.data = True
 						self.obstacle.publish(object)
@@ -547,10 +551,12 @@ class Detections(Node):
 
 def main(args=None):
 	rclpy.init(args=args)
-	detect = Detections()
-	rclpy.spin(detect)
-	detect.zed.close()
-	detect.destroy_node()
+	det = Detections()
+	executor = MultiThreadedExecutor()
+	executor.add_node(det)
+	executor.spin()
+	det.zed.close()
+	det.destroy_node()
 	rclpy.shutdown()
 	
 if __name__=="__main__":

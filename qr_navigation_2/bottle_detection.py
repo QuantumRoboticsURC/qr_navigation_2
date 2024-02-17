@@ -8,7 +8,6 @@ from custom_interfaces.msg import CA
 import pyzed.sl as sl
 from cv_bridge import CvBridge
 import numpy as np
-import time
 import cv2
 import math
 from ultralytics import YOLO

@@ -25,7 +25,7 @@ class imu (Node):
         quat= Quaternion()
         quat=data.orientation
         angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-        self.angle = (angle_z+2*math.pi)%2*math.pi
+        self.angle = (angle_z+2*math.pi)%(2*math.pi)
 
         print (self.angle)
 
