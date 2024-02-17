@@ -1,4 +1,5 @@
 import rclpy
+import argparse
 from rclpy.node import Node
 from std_msgs.msg import Bool,Int8,Float64,Header,Int32
 from geometry_msgs.msg import Twist,Point
@@ -10,6 +11,7 @@ import time
 import cv2
 import pyzed.sl as sl
 import math
+from ultralytics import YOLO
 
 
 class Detections(Node):
@@ -22,14 +24,20 @@ class Detections(Node):
 		self.twist = Twist()
 		self.found_aruco = self.create_publisher(Bool, "detected_aruco", 1)
 		self.found_orange = self.create_publisher(Bool, "detected_orange", 1)
+		self.found = self.create_publisher(Bool, "detected_bottle", 1)
 		self.CA = CA()
 		self.bridge = CvBridge()
 		self.state_pub = self.create_publisher(Int8, "state", 1)
 		self.create_subscription(Int8, "state", self.update_state, 1)
+
+		parser = argparse.ArgumentParser()
+		parser.add_argument('--svo', type=str, default=None, help='optional svo file')
+		args = parser.parse_args()
 		
 		self.vel_x = 0.33
 		self.vel_y = 0
 		self.vel_theta = 0.1
+		self.model = YOLO("yolov8n.pt")
 		
 		self.x = 0
 		self.y = 0
@@ -37,6 +45,7 @@ class Detections(Node):
 		self.contador = 0
 		self.aruco_dis = False
 		self.orange_dis = False
+		self.bottle_dis = False
 		self.is_center = False
 		self.state = -1
 
@@ -72,9 +81,15 @@ class Detections(Node):
 		self.quality = 18  
 		self.create_subscription(Int8, "image_quality", self.quality_callback, 1)
 
+		input_type = sl.InputType()
+		if args.svo is not None:
+			input_type.set_from_svo_file(args.svo)
+
+		# Crear un objeto InitParameters y establecer parámetros de configuración
+		self.init_params = sl.InitParameters(input_t=input_type, svo_real_time_mode=True)
 
 		# Create a InitParameters object and set configuration parameters
-		self.init_params = sl.InitParameters()
+		#self.init_params = sl.InitParameters()
 		self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Use ULTRA depth mode
 		self.init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
 
@@ -163,7 +178,35 @@ class Detections(Node):
 			self.aruco_dis=False
 			self.contador=0       
 		return image
+	
+	def bottle_display(self, frame, bboxes, classes):
+		if bboxes.any():
+			self.bottle_dis = True
+			self.contador += 1
 
+			for bbox, cls in zip(bboxes, classes):
+				if cls == 39:
+					(x, y, x2, y2) = bbox
+
+					# Dibujar un rectángulo alrededor de la botella
+					cv2.rectangle(frame, (x, y), (x2, y2), (0, 255, 0), 2)
+
+					cv2.putText(frame, 'Botella', (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+					cx = int(x + (x2 - x) / 2.0)
+					cy = int(y + (y2 - y) / 2.0)
+					print(f"x,y: {cx}, {cy}")
+					self.x = cx
+					self.y = cy
+					print("Botella detectada")
+
+		else:
+			self.bottle_dis = False
+			self.contador = 0
+			print("Botella no detectada")
+
+		return frame
+		
   # Listener de calidad de Imagen
 	def quality_callback(self, msg):
 		self.quality = msg.data
@@ -179,6 +222,18 @@ class Detections(Node):
 		resized_image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
 		msg = self.bridge.cv2_to_imgmsg(resized_image, encoding = "bgra8")
 		return msg
+
+	def cv2_to_imgmsg_bottle(self, image):
+		msg = self.bridge.cv2_to_imgmsg(image, encoding = "bgr8")
+		return msg
+
+	def cv2_to_imgmsg_resized_bottle(self, image, scale_percent):
+		widht = int(image.shape[1] * scale_percent / 100)
+		height = int(image.shape[0] * scale_percent / 100)
+		dim = (widht, height)
+		resized_image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+		msg = self.bridge.cv2_to_imgmsg(resized_image, encoding = "bgr8")
+		return msg
 	
 	def update_state(self, msg):
 		self.state = msg.data
@@ -186,7 +241,7 @@ class Detections(Node):
 	def contornos(self, image):
 
 		# Obtener los valores actuales de color
-		orange_low_hue = 5
+		orange_low_hue = 4
 		orange_high_hue = 22
 		orange_low_saturation = 130
 		orange_high_saturation = 255
@@ -361,6 +416,106 @@ class Detections(Node):
 			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
 			self.get_logger().info("Publicando video")
 		
+		elif self.state==2:
+			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				# Retrieve left image
+				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+				self.image_ocv = self.image.get_data()
+				# Retrieve depth map. Depth is aligned on the left image
+				self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
+				self.depth_ocv = self.depth.get_data()
+				# Retrieve colored point cloud. Point cloud is aligned on the left image.
+				self.zed.retrieve_measure(self.point_cloud, sl.MEASURE.XYZRGBA)
+
+				results = self.model(self.image_col)
+
+				result = results[0]
+				bboxes = np.array(result.boxes.xyxy.cpu(), dtype="int")
+				classes = np.array(result.boxes.cls.cpu(), dtype="int")
+
+				detected_bottle = self.bottle_display(self.image_col, bboxes, classes)
+
+				if bboxes.any():
+					ht, wd = self.image_col.shape[:2]
+
+					for bbox, cls in zip(bboxes, classes):
+						# Solo procesar detecciones de clase 39 (botella) <IMPORTANTE>
+						if cls == 39:
+							
+							# Encontrar el contorno más grande
+							max_bbox = bbox
+
+							# Calcular el centro de la botella
+							centro_objeto = ((max_bbox[0] + max_bbox[2]) // 2, (max_bbox[1] + max_bbox[3]) // 2)
+
+							# Calcular el centro de la imagen
+							centro_imagen = (wd // 2, ht // 2)
+
+							# Determinar la posición relativa
+							if centro_objeto[0] < centro_imagen[0] - 50:
+								self.posicion = "A la izquierda"
+								print("A la izquierda")
+							elif centro_objeto[0] > centro_imagen[0] + 50:
+								self.posicion = "A la derecha"
+								print("A la derecha")
+							else:
+								self.posicion = "Centrado"
+								print("Centrado")
+
+	
+							# Publicar información sobre la botella detectada
+							err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
+							if math.isfinite(point_cloud_value[2]):
+								detected = Bool()
+								if self.contador >= 2:
+									detected.data = True
+									self.found.publish(detected)
+									self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
+														point_cloud_value[1] * point_cloud_value[1] +
+														point_cloud_value[2] * point_cloud_value[2])
+									print(f"Distance to Bottle at {{{self.x};{self.y}}}: {self.distance}")
+									print(f"Contador: {self.contador}")
+									
+									self.x_zed = round(self.image.get_width() / 2)
+									self.y_zed = round(self.image.get_height() / 2)
+									cv2.circle(detected_bottle, (self.x_zed, self.y_zed),4,(0,0,255),-1)
+									
+									print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+									
+									self.CA.distance = self.distance
+									self.CA.x = self.x - self.x_zed
+									if self.x > (self.x_zed+20):
+										print(f"Botella a la derecha por: {self.x_zed - self.x} pixeles")
+										self.CA.detected = False
+									elif self.x < (self.x_zed-20):
+										print(f"Botella a la izquierda por: {self.x - self.x_zed} pixeles")
+										self.CA.detected = False
+									elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+										print(f"Botella al centro")
+										cv2.putText(detected_bottle, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+										self.CA.detected = True
+									self.center_approach.publish(self.CA)
+								else:
+									self.distance=None
+									print("Not detected ",self.bottle_dis)
+
+							cv2.putText(detected_bottle, f"Distancia: {self.distance}", (max_bbox[0], max_bbox[1] - 64),
+										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+							cv2.putText(detected_bottle, f"Posicion: {self.posicion}", (max_bbox[0], max_bbox[1] - 37),
+										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
+							self.get_logger().info("Publicando video")
+
+						else:
+							self.distance = None
+							print("Not detected ", self.bottle_dis)
+							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
+							self.get_logger().info("Publicando video sin deteccion")
+
+				else:
+					self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
+					self.get_logger().info("Publicando video sin deteccion")
+		
 		elif self.state==0:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 				# Retrieve left image
@@ -400,5 +555,3 @@ def main(args=None):
 	
 if __name__=="__main__":
 	main()
-	
-
