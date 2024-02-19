@@ -335,13 +335,14 @@ class Detections(Node):
 							
 							self.CA.distance = self.distance
 							self.CA.x = self.x - self.x_zed
-							if self.x > (self.x_zed+20):
+							if self.x > (self.x_zed+60):
 								print(f"Objeto a la derecha por: {self.x_zed - self.x} pixeles")
 								self.CA.detected = False
-							elif self.x < (self.x_zed-20):
+							elif self.x < (self.x_zed-60):
 								print(f"Objeto a la izquierda por: {self.x - self.x_zed} pixeles")
 								self.CA.detected = False
-							elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+							else:
+								#self.x >= (self.x_zed-60) and self.x <= (self.x_zed+60):
 								print(f"Objeto al centro")
 								cv2.putText(detected_orange, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 								self.CA.detected = True

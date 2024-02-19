@@ -17,7 +17,7 @@ class Center_approach(Node):
         
         self.vel_x = 0.16
         self.vel_y = 0.0
-        self.vel_theta = 0.1
+        self.vel_theta = 0.06
         self.distance = 0.0
         self.found = False
         self.x = 0.0
@@ -35,7 +35,7 @@ class Center_approach(Node):
         self.found = msg.data
         
     def approach(self):
-        if (self.distance > 1000):
+        if (self.distance > 1500):
             self.Twist.linear.x = self.vel_x
             self.Twist.angular.z = 0.0
         else:

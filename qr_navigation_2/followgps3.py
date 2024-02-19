@@ -51,12 +51,14 @@ class Follow_GPS(Node):
 		self.linear_velocity = 0.16
 		self.angular_velocity = 0.1
 		
+		
 		self.gps_coordinates = [0.0,0.0]
 		self.target_coordinates = [None,None]
 		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
 		self.orglong = 0.0
 		self.orglat = 0.0
 		self.HAS_STARTED = True
+		
 		self.state = -1
 		self.coordinate_error = 0.000002
 		self.timer = self.create_timer(0.01,self.followGPS2,callback_group=timer_group)
@@ -90,25 +92,28 @@ class Follow_GPS(Node):
 		self.angle = (angle_z+2*math.pi)%(2*math.pi)
 		#self.angle += math.pi
 		#self.angle = (angle_z+2*math.pi)%(2*math.pi)
-
+	def distance_correction(self,dx,dy):
+		if(self.gps_coordinates[0]<self.target_coordinates[0]):
+			dy= -dy
+		if(self.gps_coordinates[1]<self.target_coordinates[1]):
+			dx= -dx
+		return dy,dx
 	def calc_angle(self):
 		dY = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.gps_coordinates[1])
 		dX = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.gps_coordinates[0],self.target_coordinates[1])
+		dY,dX = self.distance_correction(dX,dY)
 		target_angle = (math.atan2(dY,dX)+2*math.pi)%(2*math.pi)
 		return target_angle
 
 	def angle_correction(self,target_angle):
+		print(f"Target angle {target_angle} 1 Current angle {self.angle}")
 		if(self.angle>target_angle):
 			self.twist.linear.x = 0.0
-			while(self.angle>target_angle):
+			while(not (self.angle > target_angle-0.001 and self.angle< target_angle+0.001)):
 				self.twist.angular.z = -(abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 				self.cmd_vel.publish(self.twist)
+				print(f"Current angle {self.angle}")
 
-		else:
-			self.twist.linear.x = 0.0
-			while(self.angle<target_angle):
-				self.twist.angular.z = (abs((self.angle - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
-				self.cmd_vel.publish(self.twist)
 		self.twist.angular.z=0.0
 		self.cmd_vel.publish(self.twist)
 
@@ -119,6 +124,7 @@ class Follow_GPS(Node):
 	def followGPS2(self):
 		if(self.state==0 and self.target_coordinates[0] != None and self.target_coordinates[1] != None):
 			print("Entered Follow GPS")
+			print(f"Current coords {self.gps_coordinates} | \nTarget coords {self.target_coordinates}")
 			state = Int8()
 			arrived = Bool()
 			
@@ -131,14 +137,16 @@ class Follow_GPS(Node):
 			WITHIN_RANGE = False
 	
 			while(distance>1.5):
+				print(f"Distance = {distance}")
 				current_time = time.time()
 				target_angle = self.calc_angle()
-				if((current_time-start_time)%30==0 and not WITHIN_RANGE):
+				if((current_time-start_time)%10==0 and not WITHIN_RANGE):
 					if(not (self.angle>target_angle-0.001 and self.angle<target_angle+0.001)):
 						self.angle_correction(target_angle)
 				else:
 					distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
 					if(distance < 20):
+						print("WITHIN RANGE")
 						if(not WITHIN_RANGE):
 							WITHIN_RANGE=True
 							self.angle_correction(self.calc_angle())
