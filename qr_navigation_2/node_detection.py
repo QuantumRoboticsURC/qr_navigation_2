@@ -34,14 +34,14 @@ class Detections(Node):
 		self.state_pub = self.create_publisher(Int8, "state", 1)
 		self.create_subscription(Int8, "state", self.update_state, 1, callback_group=listener_group)
 
-		parser = argparse.ArgumentParser()
-		parser.add_argument('--svo', type=str, default=None, help='optional svo file')
-		args = parser.parse_args()
+		#parser = argparse.ArgumentParser()
+		#parser.add_argument('--svo', type=str, default=None, help='optional svo file')
+		#args = parser.parse_args()
 		
 		self.vel_x = 0.33
 		self.vel_y = 0
 		self.vel_theta = 0.1
-		self.model = YOLO("yolov8n.pt")
+		#self.model = YOLO("yolov8n.pt")
 		
 		self.x = 0
 		self.y = 0
@@ -82,12 +82,12 @@ class Detections(Node):
 		
 		self.zed = sl.Camera()
 
-		self.quality = 18  
+		self.quality = 21 
 		self.create_subscription(Int8, "image_quality", self.quality_callback, 1)
 
 		input_type = sl.InputType()
-		if args.svo is not None:
-			input_type.set_from_svo_file(args.svo)
+		#if args.svo is not None:
+		#	input_type.set_from_svo_file(args.svo)
 
 		# Crear un objeto InitParameters y establecer parámetros de configuración
 		self.init_params = sl.InitParameters(input_t=input_type, svo_real_time_mode=True)
@@ -245,11 +245,11 @@ class Detections(Node):
 	def contornos(self, image):
 
 		# Obtener los valores actuales de color
-		orange_low_hue = 6
-		orange_high_hue = 14
-		orange_low_saturation = 239
+		orange_low_hue = 12
+		orange_high_hue = 25
+		orange_low_saturation = 220
 		orange_high_saturation = 255
-		orange_low_value = 235
+		orange_low_value = 210
 		orange_high_value = 255
 
 		# Convertir el fotograma al espacio de color HSV
@@ -509,17 +509,17 @@ class Detections(Node):
 										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 							cv2.putText(detected_bottle, f"Posicion: {self.posicion}", (max_bbox[0], max_bbox[1] - 37),
 										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
+							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, self.quality))
 							self.get_logger().info("Publicando video")
 
 						else:
 							self.distance = None
 							print("Not detected ", self.bottle_dis)
-							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
+							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, self.quality))
 							self.get_logger().info("Publicando video sin deteccion")
  
 				else:
-					self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, 30))
+					self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, self.quality))
 					self.get_logger().info("Publicando video sin deteccion")
 		
 		elif self.state==0:
