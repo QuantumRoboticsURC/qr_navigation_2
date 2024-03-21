@@ -1,0 +1,2 @@
+
+PIXEL_ANGLE_ERROR = 20

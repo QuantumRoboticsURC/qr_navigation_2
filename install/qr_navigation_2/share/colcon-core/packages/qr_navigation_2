@@ -1,0 +1,1 @@
+custom_interfaces:geometry_msgs:nav_msgs:rclpy:rosidl_default_runtime:sensor_msgs:std_msgs:ublox_dgnss:ublox_dgnss_node:ublox_ubx_interfaces:ublox_ubx_msgs

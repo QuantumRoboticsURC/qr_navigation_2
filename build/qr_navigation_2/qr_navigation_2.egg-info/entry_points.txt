@@ -1,0 +1,17 @@
+[console_scripts]
+bottle = qr_navigation_2.bottle_detection:main
+bottle_ros2 = qr_navigation_2.bottle_detection_test:main
+center_approach = qr_navigation_2.center_and_approach_test:main
+controller = qr_navigation_2.node_controller:main
+deteccion = qr_navigation_2.deteccion:main
+followGPS = qr_navigation_2.followgps3:main
+imu = qr_navigation_2.test_imu:main
+node_detection_ros2 = qr_navigation_2.node_detection:main
+orange_detection = qr_navigation_2.orange_ros2:main
+pub = qr_navigation_2.test_publisher:main
+qos = qr_navigation_2.test_qos:main
+sus = qr_navigation_2.test_subscriber:main
+test_gps = qr_navigation_2.test_listener_gps:main
+web = qr_navigation_2.fake_web:main
+web_inter = qr_navigation_2.intermediary_web:main
+
