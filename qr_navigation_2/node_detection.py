@@ -52,6 +52,7 @@ class Detections(Node):
 		self.bottle_dis = False
 		self.is_center = False
 		self.state = -1
+		self.PIXEL_DISTANCE = 50
 
 		self.ARUCO_DICT = {
 			"DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -177,7 +178,7 @@ class Detections(Node):
 				cv2.putText(image, str(markerID),(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
 					0.5, (0, 255, 0), 2)
 				
-				print("[Inference] ArUco marker ID: {}".format(markerID))      
+				#print("[Inference] ArUco marker ID: {}".format(markerID))      
 		else:
 			self.aruco_dis=False
 			self.contador=0       
@@ -327,7 +328,7 @@ class Detections(Node):
 							print(f"Distance to Object at {{{self.x};{self.y}}}: {self.distance}")
 							print(f"Contador: {self.contador}")
 							
-							self.x_zed = round(self.image.get_width() / 2)
+							self.x_zed = round(self.image.get_width() / 2)+self.PIXEL_DISTANCE
 							self.y_zed = round(self.image.get_height() / 2)
 							cv2.circle(detected_orange, (self.x_zed, self.y_zed),4,(0,0,255),-1)
 							
@@ -384,7 +385,7 @@ class Detections(Node):
 				#distance = 0
 				if math.isfinite(point_cloud_value[2]):
 					detected = Bool()
-					if self.contador >= 2:
+					if self.contador >= 10:
 						detected.data = True
 						self.found_aruco.publish(detected)
 						self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
@@ -393,7 +394,7 @@ class Detections(Node):
 						print(f"Distance to Aruco at {{{self.x};{self.y}}}: {self.distance}")
 						print(f"Contador: {self.contador}")
 						
-						self.x_zed = round(self.image.get_width() / 2)
+						self.x_zed = round(self.image.get_width() / 2)+self.PIXEL_DISTANCE
 						self.y_zed = round(self.image.get_height() / 2)
 						cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
 						
@@ -401,14 +402,14 @@ class Detections(Node):
 						
 						self.CA.distance = self.distance
 						self.CA.x = self.x - self.x_zed
-
-						if self.x > (self.x_zed+20):
-							print(f"Aruco a la derecha por: {self.x_zed - self.x} pixeles")
+      
+						if self.x > (self.x_zed+self.PIXEL_DISTANCE):
+							print(f"Aruco a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 							self.CA.detected = False
-						elif self.x < (self.x_zed-20):
-							print(f"Aruco a la izquierda por: {self.x - self.x_zed} pixeles")
+						elif self.x < (self.x_zed-self.PIXEL_DISTANCE):
+							print(f"Aruco a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 							self.CA.detected = False
-						elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+						else: #self.x >= (self.x_zed-50) and self.x <= (self.x_zed+50):
 							print(f"Aruco al centro")
 							cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 							self.CA.detected = True
@@ -490,13 +491,13 @@ class Detections(Node):
 									
 									self.CA.distance = self.distance
 									self.CA.x = self.x - self.x_zed
-									if self.x > (self.x_zed+20):
+									if self.x > (self.x_zed+50):
 										print(f"Botella a la derecha por: {self.x_zed - self.x} pixeles")
 										self.CA.detected = False
-									elif self.x < (self.x_zed-20):
+									elif self.x < (self.x_zed-50):
 										print(f"Botella a la izquierda por: {self.x - self.x_zed} pixeles")
 										self.CA.detected = False
-									elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+									else: #self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
 										print(f"Botella al centro")
 										cv2.putText(detected_bottle, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 										self.CA.detected = True

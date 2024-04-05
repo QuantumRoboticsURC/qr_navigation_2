@@ -22,6 +22,7 @@ class Center_approach(Node):
         self.found = False
         self.x = 0.0
         self.center = False
+        self.finish = False
         self.timer = self.create_timer(0.01, self.get_aruco)
         
     def callback(self,msg):
@@ -35,7 +36,7 @@ class Center_approach(Node):
         self.found = msg.data
         
     def approach(self):
-        if (self.distance > 1500):
+        if (self.distance > 1300):
             self.Twist.linear.x = self.vel_x
             self.Twist.angular.z = 0.0
         else:
@@ -48,21 +49,22 @@ class Center_approach(Node):
             arrived.data = True
             state = Int8()
             state.data = -1
+            self.finish=True
             self.state_pub.publish(state)
             self.arrived.publish(arrived)
         
         self.cmd_vel_ca.publish(self.Twist) 
 
     def get_aruco(self):
-        if (self.found):
+        if (self.found and not self.finish):
             if (self.center):
                 self.approach()
                 print("Centro")
-            elif (self.x < 0):
+            elif (self.x+50*(1200/self.distance)  < 0):
                 self.Twist.linear.x = 0.0
                 self.Twist.angular.z = self.vel_theta
                 print("Izquierda")
-            elif (self.x > 0):
+            elif (self.x-50*(1200/self.distance) > 0):
                 self.Twist.linear.x = 0.0
                 self.Twist.angular.z = -self.vel_theta
                 print("Derecha")

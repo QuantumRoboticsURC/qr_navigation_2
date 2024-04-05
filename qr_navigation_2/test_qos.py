@@ -10,7 +10,7 @@ class MySubscriber(Node):
         super().__init__('my_subscriber')
         self.HAS_STARTED = True
 
-        self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_rover/ubx_nav_hp_pos_llh',self.callback,qos_profile_sensor_data)
+        self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.callback,qos_profile_sensor_data)
         self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
         self.orglong = 0.0
         self.orglat = 0.0
