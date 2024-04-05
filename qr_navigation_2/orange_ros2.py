@@ -116,6 +116,30 @@ class Detect_Object(Node):
         # Encontrar contornos en la imagen binarizada
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
+
+    def contornos(self, image):
+        # Convertir la imagen a HSV
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        # Definir el rango de color naranja en HSV
+        lower_orange = np.array([6, 239, 235])
+        upper_orange = np.array([14, 255, 255])
+
+        # Aplicar la máscara de color naranja
+        mask = cv2.inRange(hsv, lower_orange, upper_orange)
+
+        # Convertir la máscara a escala de grises
+        gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar Adaptive Thresholding
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+
+        # Aplicar operaciones morfológicas para eliminar el ruido
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+
+        # Encontrar contornos en la imagen binarizada
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
         return contours
 
 
