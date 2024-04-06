@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool, Int8, Float64, Header, Int32
-from geometry_msgs.msg import Twist, Point
+from std_msgs.msg import Bool,Int8,Float64,Header,Int32
+from geometry_msgs.msg import Twist,Point
 from sensor_msgs.msg import Image
 from custom_interfaces.msg import CA
 from cv_bridge import CvBridge
@@ -16,16 +16,16 @@ class Detect_Object(Node):
     def __init__(self):
         super().__init__("orange_node")
         self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
-        self.center_approach = self.create_publisher(CA, "center_approach", 10)
+        self.center_approach = self.create_publisher(CA,"center_approach",10)
         self.twist = Twist()
         self.found = self.create_publisher(Bool, "detected_orange", 1)
         self.CA = CA()
         self.bridge = CvBridge()
-
+        
         self.vel_x = 0.33
         self.vel_y = 0
         self.vel_theta = 0.1
-
+        
         self.x = 0
         self.y = 0
         self.distance = None
@@ -43,8 +43,8 @@ class Detect_Object(Node):
 
         # Open the camera
         status = self.zed.open(self.init_params)
-        if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
-            print("Camera Open : " + repr(status) + ". Exit program.")
+        if status != sl.ERROR_CODE.SUCCESS: #Ensure the camera has opened succesfully
+            print("Camera Open : "+repr(status)+". Exit program.")
             exit()
 
         # Create and set RuntimeParameters after opening the camera
@@ -52,26 +52,26 @@ class Detect_Object(Node):
         self.image = sl.Mat()
         self.depth = sl.Mat()
         self.point_cloud = sl.Mat()
-
+        
         self.image_ocv = self.image.get_data()
-        self.image_ocv = self.image_ocv[:, :-1]
+        self.image_ocv = self.image_ocv[:,:-1]
         self.depth_ocv = self.image.get_data()
-
+        
         self.mirror_ref = sl.Transform()
-        self.mirror_ref.set_translation(sl.Translation(2.75, 4.0, 0))
+        self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
 
-        self.timer = self.create_timer(0.001, self.detect)
+        self.timer = self.create_timer(0.001,self.detect)
 
     def orange_display(self, contours, image):
 
         if contours:
             self.orange_dis = True
             self.contador += 1
-
+            
             for (idx, contour) in enumerate(contours):
                 x, y, w, h = cv2.boundingRect(contour)
 
-                corners = np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], dtype=np.int32)
+                corners = np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], dtype = np.int32)
                 corners = corners.reshape((-1, 1, 2))
 
                 cv2.polylines(image, [corners], isClosed=True, color=(0, 255, 0), thickness=2)
@@ -91,36 +91,34 @@ class Detect_Object(Node):
         return image
 
     def cv2_to_imgmsg(self, image):
-        msg = self.bridge.cv2_to_imgmsg(image, encoding='bgra8')
+        msg = self.bridge.cv2_to_imgmsg(image, encoding = 'bgra8')
         return msg
 
-    def adaptive_threshold(self, image):
-        # Convertir la imagen a escala de grises
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        # Aplicar Adaptive Thresholding
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
-
-        return thresh
-
     def contornos(self, image):
-        # Convertir la imagen a escala de grises
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Convertir el fotograma al espacio de color HSV
+        frame_hsv = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGR2HSV)
+
+        # Definir los umbrales de color naranja en el espacio de color HSV
+        lower_orange = np.array([5, 130, 160])
+        upper_orange = np.array([22, 255, 255])
+
+        # Crear una máscara para detectar objetos de color naranja
+        mask = cv2.inRange(frame_hsv, lower_orange, upper_orange)
 
         # Aplicar Adaptive Thresholding
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+        thresh = cv2.adaptiveThreshold(mask, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
 
         # Aplicar operaciones morfológicas para eliminar el ruido
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
 
-        # Encontrar contornos en la imagen binarizada
+        # Encontrar contornos en la máscara
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
         return contours
 
 
     def detect(self):
-
+        
         if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Retrieve left image
             self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
@@ -134,6 +132,8 @@ class Detect_Object(Node):
             self.corners = self.contornos(self.image_ocv)
 
             detected_orange = self.orange_display(self.corners, self.image_ocv)
+
+
 
             if self.corners:
 
@@ -164,59 +164,65 @@ class Detect_Object(Node):
 
                 # Dibujar un rectángulo alrededor del objeto naranja
                 cv2.rectangle(self.image_ocv, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
                 cv2.putText(self.image_ocv, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-                err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
 
+                err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
+                #distance = 0
                 if math.isfinite(point_cloud_value[2]):
                     detected = Bool()
                     if self.contador >= 2:
                         detected.data = True
                         self.found.publish(detected)
                         self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
-                                                  point_cloud_value[1] * point_cloud_value[1] +
-                                                  point_cloud_value[2] * point_cloud_value[2])
+                                            point_cloud_value[1] * point_cloud_value[1] +
+                                            point_cloud_value[2] * point_cloud_value[2])
                         print(f"Distance to Object at {{{self.x};{self.y}}}: {self.distance}")
                         print(f"Contador: {self.contador}")
-
+                        
                         self.x_zed = round(self.image.get_width() / 2)
                         self.y_zed = round(self.image.get_height() / 2)
-                        cv2.circle(detected_orange, (self.x_zed, self.y_zed), 4, (0, 0, 255), -1)
-
+                        cv2.circle(detected_orange, (self.x_zed, self.y_zed),4,(0,0,255),-1)
+                        
                         print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
-
+                        
                         self.CA.distance = self.distance
                         self.CA.x = self.x - self.x_zed
-                        if self.x > (self.x_zed + 20):
+                        if self.x > (self.x_zed+20):
                             print(f"Objeto a la derecha por: {self.x_zed - self.x} pixeles")
                             self.CA.detected = False
-                        elif self.x < (self.x_zed - 20):
+                        elif self.x < (self.x_zed-20):
                             print(f"Objeto a la izquierda por: {self.x - self.x_zed} pixeles")
                             self.CA.detected = False
-                        elif self.x >= (self.x_zed - 20) and self.x <= (self.x_zed + 20):
+                        elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
                             print(f"Objeto al centro")
-                            cv2.putText(detected_orange, f"Centro", (self.x, self.y - 80), cv2.FONT_HERSHEY_SIMPLEX,
-                                        0.9, (0, 255, 0), 2)
+                            cv2.putText(detected_orange, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                             self.CA.detected = True
                         self.center_approach.publish(self.CA)
                     else:
-                        self.distance = None
-                        print("Not detected ", self.orange_dis)
+                        self.distance=None
+                        print("Not detected ",self.orange_dis)
 
-                cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.9, (0, 255, 0), 2)
-                cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                 self.cv2_to_imgmsg(detected_orange)
                 self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
                 self.get_logger().info("Publicando video")
-
+            
+            else:      
+                self.cv2_to_imgmsg(detected_orange)
+                self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
+                self.get_logger().info("Publicando video sin deteccion")
+                    
 def main(args=None):
     rclpy.init(args=args)
     detect = Detect_Object()
     rclpy.spin(detect)
     detect.destroy_node()
     rclpy.shutdown()
-
-if __name__ == "__main__":
+            
+if __name__=="__main__":
     main()
+
+                    
