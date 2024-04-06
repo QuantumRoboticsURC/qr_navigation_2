@@ -93,7 +93,7 @@ class Detect_Object(Node):
     def cv2_to_imgmsg(self, image):
         msg = self.bridge.cv2_to_imgmsg(image, encoding='bgra8')
         return msg
-    
+
     def adaptive_threshold(self, image):
         # Convertir la imagen a escala de grises
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -115,7 +115,7 @@ class Detect_Object(Node):
 
         # Encontrar contornos en la imagen binarizada
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
+
         return contours
 
 
@@ -187,13 +187,13 @@ class Detect_Object(Node):
 
                         self.CA.distance = self.distance
                         self.CA.x = self.x - self.x_zed
-                        if self.x > (self.x_zed + 60):
+                        if self.x > (self.x_zed + 20):
                             print(f"Objeto a la derecha por: {self.x_zed - self.x} pixeles")
                             self.CA.detected = False
-                        elif self.x < (self.x_zed - 60):
+                        elif self.x < (self.x_zed - 20):
                             print(f"Objeto a la izquierda por: {self.x - self.x_zed} pixeles")
                             self.CA.detected = False
-                        else:
+                        elif self.x >= (self.x_zed - 20) and self.x <= (self.x_zed + 20):
                             print(f"Objeto al centro")
                             cv2.putText(detected_orange, f"Centro", (self.x, self.y - 80), cv2.FONT_HERSHEY_SIMPLEX,
                                         0.9, (0, 255, 0), 2)
