@@ -65,7 +65,7 @@ class Follow_GPS(Node):
 		self.FIRST_LAT = False
 		self.FIRST_LON = False
 		self.state = -1
-		self.coordinate_error = 0.0000009  
+		self.coordinate_error = 0.000005  
 		self.distance_error = 1.0
 		self.timer = self.create_timer(0.001,self.followGPS2,callback_group=timer_group)
 		
@@ -137,17 +137,23 @@ class Follow_GPS(Node):
 		if(target_angle>self.angle):      
 			difference_from_one = ((2*math.pi)-target_angle)+self.angle
 			difference_from_two = target_angle-self.angle
-			if(abs(difference_from_two)>abs(difference_from_one)):
+			print(f"Difference1 {difference_from_one} | Difference2 {difference_from_two}")
+			if(difference_from_two>difference_from_one):
 				sign=1
+				print("antihorario")
 			else:
 				sign=-1
+				print("horario")
 		else:
 			difference_from_one = ((2*math.pi)-self.angle)+target_angle
 			difference_from_two = self.angle-target_angle
-			if(abs(difference_from_two)>abs(difference_from_one)):
-				sign=-1
-			else:
+			print(f"Difference1 {difference_from_one} | Difference2 {difference_from_two}")
+			if(difference_from_two>difference_from_one):
 				sign=1
+				print("antihorario")
+			else:
+				sign=-1
+				print("horario")
 		while(not ((self.angle > (target_angle-0.05)) and (self.angle < (target_angle+0.05)))):
 			self.twist.angular.z = sign*(abs((abs(self.angle-target_angle) - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
 			self.cmd_vel.publish(self.twist) 
@@ -177,14 +183,15 @@ class Follow_GPS(Node):
 			start_time = time.time()
 			WITHIN_RANGE = False
 	
-			while(distance>1.2): 
+			while(distance>1.5): 
 				#print(f"Distance = {distance}")
 				distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
 				current_time = time.time()
 				target_angle = self.calc_angle()
-				if((int(current_time)-int(start_time))%5.0==0.0):
+				if((int(current_time)-int(start_time))%8.0==0.0):
 					start_time = time.time()
-					if(not((self.angle>(target_angle-0.1)) and (self.angle<(target_angle+0.1)))):
+					if(not((self.angle>(target_angle-0.15)) and (self.angle<(target_angle+0.1)))):
+						print("Distancia ",distance)
 						self.angle_correction(target_angle)
 				else:
 					distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
@@ -209,6 +216,8 @@ class Follow_GPS(Node):
 					self.cmd_vel.publish(self.twist)
 			
 			print("Distance was : ",distance)
+			print(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.dX, self.dY}")
+			
 			self.twist.linear.x = 0.0
 			self.twist.angular.z = 0.0
 			arrived.data=True
