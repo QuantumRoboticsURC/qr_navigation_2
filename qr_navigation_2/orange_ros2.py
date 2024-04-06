@@ -93,20 +93,19 @@ class Detect_Object(Node):
     def cv2_to_imgmsg(self, image):
         msg = self.bridge.cv2_to_imgmsg(image, encoding='bgra8')
         return msg
+    
+    def adaptive_threshold(self, image):
+        # Convertir la imagen a escala de grises
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar Adaptive Thresholding
+        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+
+        return thresh
 
     def contornos(self, image):
-        # Convertir la imagen a HSV
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-        # Definir el rango de color naranja en HSV
-        lower_orange = np.array([6, 239, 235])
-        upper_orange = np.array([14, 255, 255])
-
-        # Aplicar la máscara de color naranja
-        mask = cv2.inRange(hsv, lower_orange, upper_orange)
-
-        # Convertir la máscara a escala de grises
-        gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        # Convertir la imagen a escala de grises
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Aplicar Adaptive Thresholding
         thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
@@ -116,7 +115,7 @@ class Detect_Object(Node):
 
         # Encontrar contornos en la imagen binarizada
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+        
         return contours
 
 
