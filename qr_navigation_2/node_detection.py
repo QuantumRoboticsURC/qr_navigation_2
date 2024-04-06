@@ -120,7 +120,7 @@ class Detections(Node):
 
 		#self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
 
-		self.timer = self.create_timer(1e-90,self.detect, callback_group=timer_group)
+		self.timer = self.create_timer(0.0001,self.detect, callback_group=timer_group)
 	
 	def orange_display(self, contours, image):
 
