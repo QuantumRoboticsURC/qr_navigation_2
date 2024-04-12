@@ -59,6 +59,7 @@ class Detect_Object(Node):
         
         self.mirror_ref = sl.Transform()
         self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
+        self.saturation_threshold = 50
 
         self.timer = self.create_timer(0.001,self.detect)
 
@@ -98,22 +99,27 @@ class Detect_Object(Node):
 
         # Convertir el fotograma al espacio de color HSV
         frame_hsv = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGR2HSV)
+        saturation = frame_hsv[:,:,1]
+        saturation_normalized = cv2.normalize(saturation,None,0,100,cv2.NORM_MINMAX)
 
         # Definir los umbrales de color naranja en el espacio de color HSV
         lower_orange = np.array([5, 130, 160])
         upper_orange = np.array([22, 255, 255])
 
         # Crear una máscara para detectar objetos de color naranja
-        mask = cv2.inRange(frame_hsv, lower_orange, upper_orange)
+        mask1 = cv2.inRange(frame_hsv, lower_orange, upper_orange)
+        mask2 = cv2.inRange(saturation_normalized,self.saturation_threshold,100)
+        combined_mask = cv2.bitwise_and(mask1,mask2)
 
         # Aplicar Adaptive Thresholding
-        thresh = cv2.adaptiveThreshold(mask, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+        thresh = cv2.adaptiveThreshold(combined_mask, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
 
         # Aplicar operaciones morfológicas para eliminar el ruido
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
 
         # Encontrar contornos en la máscara
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
         return contours
 
 
@@ -132,9 +138,6 @@ class Detect_Object(Node):
             self.corners = self.contornos(self.image_ocv)
 
             detected_orange = self.orange_display(self.corners, self.image_ocv)
-
-
-
             if self.corners:
 
                 ht, wd = self.image_ocv.shape[:2]
@@ -165,7 +168,7 @@ class Detect_Object(Node):
                 # Dibujar un rectángulo alrededor del objeto naranja
                 cv2.rectangle(self.image_ocv, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-                cv2.putText(self.image_ocv, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                cv2.putText(self.image_ocv, 'Naranja '  , (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
 
                 err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)

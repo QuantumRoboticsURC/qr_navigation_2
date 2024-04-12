@@ -57,6 +57,7 @@ class Center_approach(Node):
 
     def get_aruco(self):
         if (self.found and not self.finish):
+            print("Moving")
             if (self.center):
                 self.approach()
                 print("Centro")

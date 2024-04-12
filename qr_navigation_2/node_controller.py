@@ -21,7 +21,7 @@ class NodeController(Node):
 		# Publicadores
 		self.pub_arrived = self.create_publisher(Bool, 'arrived', 10)
 		self.pub_cmd_vel = self.create_publisher(Twist, 'cmd_vel', 10)
-		self.pub_state = self.create_publisher(Int8, 'state', 10)
+		self.pub_state = self.create_publisher(Int8, '/state', 1)
 		self.pub_go = self.create_publisher(Bool, '/go', 10)
 
 		# Variables de estado
@@ -149,7 +149,9 @@ class NodeController(Node):
 			self.pub_arrived.publish(arrive_msg)
 			print(f"Received start signal. Target function: {self.target_function}")
 			
+			
 			if self.target_function == "gps_only":
+				
 				print("Performing actions for target function 'gps_only'")
 				self.pub_state.publish(self.state)
 				self.has_started = True

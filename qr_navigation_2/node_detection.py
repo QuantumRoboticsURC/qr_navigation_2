@@ -31,8 +31,8 @@ class Detections(Node):
 		self.found = self.create_publisher(Bool, "detected_bottle", 1)
 		self.CA = CA()
 		self.bridge = CvBridge()
-		self.state_pub = self.create_publisher(Int8, "state", 1)
-		self.create_subscription(Int8, "state", self.update_state, 1, callback_group=listener_group)
+		self.state_pub = self.create_publisher(Int8, "/state", 1)
+		self.create_subscription(Int8, "/state", self.update_state, 1, callback_group=listener_group)
 
 		#parser = argparse.ArgumentParser()
 		#parser.add_argument('--svo', type=str, default=None, help='optional svo file')
@@ -80,6 +80,7 @@ class Detections(Node):
 		self.aruco_type = "DICT_4X4_50"
 		self.arucoDict = cv2.aruco.Dictionary_get(self.ARUCO_DICT[self.aruco_type])
 		self.arucoParams = cv2.aruco.DetectorParameters_create()
+		self.saturation_threshold = 50
 		
 		self.zed = sl.Camera()
 
@@ -103,7 +104,7 @@ class Detections(Node):
 		if status != sl.ERROR_CODE.SUCCESS: #Ensure the camera has opened succesfully
 			print("Camera Open : "+repr(status)+". Exit program.")
 			exit()
-
+		
 		# Create and set RuntimeParameters after opening the camera
 		self.runtime_parameters = sl.RuntimeParameters()
 		self.image = sl.Mat()
@@ -119,11 +120,10 @@ class Detections(Node):
 		self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
 
 		#self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
-
 		self.timer = self.create_timer(0.0001,self.detect, callback_group=timer_group)
 	
+	
 	def orange_display(self, contours, image):
-
 		if contours:
 			self.orange_dis = True
 			self.contador += 1
@@ -242,35 +242,39 @@ class Detections(Node):
 	
 	def update_state(self, msg):
 		self.state = msg.data
-		print(msg.data)
-	def contornos(self, image):
 
-		# Obtener los valores actuales de color
-		orange_low_hue = 12
-		orange_high_hue = 25
-		orange_low_saturation = 220
-		orange_high_saturation = 255
-		orange_low_value = 210
-		orange_high_value = 255
+	def contornos(self,image):
 
 		# Convertir el fotograma al espacio de color HSV
 		frame_hsv = cv2.cvtColor(self.image_ocv, cv2.COLOR_BGR2HSV)
+		saturation = frame_hsv[:,:,1]
+		saturation_normalized = cv2.normalize(saturation,None,0,100,cv2.NORM_MINMAX)
 
 		# Definir los umbrales de color naranja en el espacio de color HSV
-		lower_orange = np.array([orange_low_hue, orange_low_saturation, orange_low_value])
-		upper_orange = np.array([orange_high_hue, orange_high_saturation, orange_high_value])
+		lower_orange = np.array([5, 130, 160])
+		upper_orange = np.array([22, 255, 255])
 
 		# Crear una máscara para detectar objetos de color naranja
-		mask = cv2.inRange(frame_hsv, lower_orange, upper_orange)
+		mask1 = cv2.inRange(frame_hsv, lower_orange, upper_orange)
+		mask2 = cv2.inRange(saturation_normalized,self.saturation_threshold,100)
+		combined_mask = cv2.bitwise_and(mask1,mask2)
+
+		# Aplicar Adaptive Thresholding
+		thresh = cv2.adaptiveThreshold(combined_mask, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+
+		# Aplicar operaciones morfológicas para eliminar el ruido
+		thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
 
 		# Encontrar contornos en la máscara
-		contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+				
 		return contours
 	
 	def detect(self):
 		if self.state == 3:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 				# Retrieve left image
+				# self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.image_ocv = self.image.get_data()
 				# Retrieve depth map. Depth is aligned on the left image
@@ -282,7 +286,6 @@ class Detections(Node):
 				self.corners = self.contornos(self.image_ocv)
 
 				detected_orange = self.orange_display(self.corners, self.image_ocv)
-
 				if self.corners:
 
 					ht, wd = self.image_ocv.shape[:2]
@@ -313,7 +316,8 @@ class Detections(Node):
 					# Dibujar un rectángulo alrededor del objeto naranja
 					cv2.rectangle(self.image_ocv, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-					cv2.putText(self.image_ocv, 'Naranja', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+					cv2.putText(self.image_ocv, 'Naranja '  , (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
 
 					err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
 					#distance = 0
@@ -321,14 +325,14 @@ class Detections(Node):
 						detected = Bool()
 						if self.contador >= 2:
 							detected.data = True
-							self.found_orange.publish(detected)
+							self.found.publish(detected)
 							self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 												point_cloud_value[1] * point_cloud_value[1] +
 												point_cloud_value[2] * point_cloud_value[2])
 							print(f"Distance to Object at {{{self.x};{self.y}}}: {self.distance}")
 							print(f"Contador: {self.contador}")
 							
-							self.x_zed = round(self.image.get_width() / 2)+self.PIXEL_DISTANCE
+							self.x_zed = round(self.image.get_width() / 2)
 							self.y_zed = round(self.image.get_height() / 2)
 							cv2.circle(detected_orange, (self.x_zed, self.y_zed),4,(0,0,255),-1)
 							
@@ -336,14 +340,13 @@ class Detections(Node):
 							
 							self.CA.distance = self.distance
 							self.CA.x = self.x - self.x_zed
-							if self.x > (self.x_zed+60):
+							if self.x > (self.x_zed+20):
 								print(f"Objeto a la derecha por: {self.x_zed - self.x} pixeles")
 								self.CA.detected = False
-							elif self.x < (self.x_zed-60):
+							elif self.x < (self.x_zed-20):
 								print(f"Objeto a la izquierda por: {self.x - self.x_zed} pixeles")
 								self.CA.detected = False
-							else:
-								#self.x >= (self.x_zed-60) and self.x <= (self.x_zed+60):
+							elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
 								print(f"Objeto al centro")
 								cv2.putText(detected_orange, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 								self.CA.detected = True
@@ -354,12 +357,13 @@ class Detections(Node):
 
 					cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 					cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange, self.quality))
+					self.cv2_to_imgmsg(detected_orange)
+					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
 					self.get_logger().info("Publicando video")
 				
 				else:      
 					self.cv2_to_imgmsg(detected_orange)
-					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange, self.quality))
+					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
 					self.get_logger().info("Publicando video sin deteccion")
 
 		elif self.state == 4:
@@ -385,7 +389,7 @@ class Detections(Node):
 				#distance = 0
 				if math.isfinite(point_cloud_value[2]):
 					detected = Bool()
-					if self.contador >= 10:
+					if self.contador >= 2:
 						detected.data = True
 						self.found_aruco.publish(detected)
 						self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
@@ -402,7 +406,7 @@ class Detections(Node):
 						
 						self.CA.distance = self.distance
 						self.CA.x = self.x - self.x_zed
-      
+	  
 						if self.x > (self.x_zed+self.PIXEL_DISTANCE):
 							print(f"Aruco a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 							self.CA.detected = False
