@@ -47,8 +47,7 @@ class Follow_GPS(Node):
 		self.subscription = self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data,callback_group=listener_group)
 		self.my_rover_angle = self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10,callback_group=listener_group)    
 		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state,1,callback_group=listener_group)
-		#self.lat= self.create_subscription(Float64,'/latitude',self.update_lat,10)
-		#self.lon= self.create_subscription(Float64,'/longitude',self.update_lon,10)
+  
 		self.twist = Twist()
 		self.linear_velocity = 0.16
 		self.angular_velocity = 0.1
@@ -56,11 +55,12 @@ class Follow_GPS(Node):
 		
 		self.gps_coordinates = [0.0,0.0]
 		self.target_coordinates = [None,None]
-		self.x_rover,self.y_rover,self.angle = 0.0,0.0,0.0
-		self.dX = 0.0
-		self.dY = 0.0
+		self.x_rover,self.y_rover,self.yaw_angle = 0.0,0.0,0.0
+		self.x_target = 0.0
+		self.y_target = 0.0
 		self.orglong = 0.0
 		self.orglat = 0.0
+		self.time_constant=8.0
 		self.HAS_STARTED = True
 		self.FIRST_LAT = False
 		self.FIRST_LON = False
@@ -87,19 +87,6 @@ class Follow_GPS(Node):
 		if(not self.HAS_STARTED):
 			self.update_position()
    
-	def update_lat(self,data):
-		self.gps_coordinates[0]=data.data
-		if not self.FIRST_LAT:
-			self.orglat  = data.data
-			self.FIRST_LAT = True
-		if(self.FIRST_LAT and self.FIRST_LON):
-			self.update_position()
-   
-	def update_lon(self,data):
-		self.gps_coordinates[1]=data.data
-		if not self.FIRST_LON:
-			self.orglong = data.data
-			self.FIRST_LON = True
 		
   
 	def update_state(self,msg):
@@ -109,55 +96,32 @@ class Follow_GPS(Node):
 		quat = Quaternion()
 		quat = msg.orientation
 		angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-		self.angle = (angle_z+2*math.pi)%(2*math.pi)
+		self.yaw_angle = angle_z
 
 	def calc_angle(self):
-		target_angle = ((math.atan2(self.dY-self.y_rover,self.dX-self.x_rover))+2*math.pi)%(2*math.pi)
+		target_angle = (math.atan2(self.y_target-self.y_rover,self.x_target-self.x_rover))
 		return target_angle
 
 
 	def direction_planner2(self,target_angle):
-		ang_error = target_angle-self.angle 
+		ang_error = target_angle-self.yaw-angle 
 		ang_error_adj=math.atan2(math.sin(ang_error),math.cos(ang_error))
 		if(ang_error_adj>0):
 			return -1
 		return 1
 			
-			
-	def direction_planner(self,target_angle):
-		if(target_angle>self.angle):      
-			difference_from_one = ((2*math.pi)-target_angle)+self.angle
-			difference_from_two = target_angle-self.angle
-			print(f"Difference1 {difference_from_one} | Difference2 {difference_from_two}")
-			if(difference_from_two>difference_from_one):
-				sign=1
-				print("antihorario")
-			else:
-				sign=-1
-				print("horario")
-		else:
-			difference_from_one = ((2*math.pi)-self.angle)+target_angle
-			difference_from_two = self.angle-target_angle
-			print(f"Difference1 {difference_from_one} | Difference2 {difference_from_two}")
-			if(difference_from_two>difference_from_one):
-				sign=1
-				print("antihorario")
-			else:
-				sign=-1
-				print("horario")
-		return sign
 
 	def angle_correction(self,target_angle):
 		print("------------------CORRECTION2-------------------------")
-		print(f"Target angle {target_angle} | Current angle {self.angle}")
-		print("Coord objetivo ", self.dX,self.dY)
+		print(f"Target angle {target_angle} | Current angle {self.yaw_angle}")
+		print("Coord objetivo ", self.x_target,self.y_target)
 		print("Coord actual ", self.x_rover,self.y_rover)
 
 		self.twist.linear.x = 0.0
-		sign = self.direction_planner(target_angle)
+		sign = self.direction_planner2(target_angle)
   
-		while(not ((self.angle > (target_angle-0.05)) and (self.angle < (target_angle+0.05)))):
-			self.twist.angular.z = sign*(abs((abs(self.angle-target_angle) - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)
+		while(not ((self.yaw_angle > (target_angle-0.05)) and (self.yaw_angle < (target_angle+0.05)))):
+			self.twist.angular.z = sign*self.angular_velocity
 			self.cmd_vel.publish(self.twist) 
 
 		self.twist.angular.z=0.0
@@ -168,44 +132,41 @@ class Follow_GPS(Node):
 		return var
 
 	def check_distance_precision(self):
-		var = (self.x_rover>(self.dX-self.distance_error) and self.x_rover<(self.dX+self.distance_error)) and (self.y_rover>(self.dY-self.distance_error) and self.y_rover<(self.dY+self.distance_error))
+		var = (self.x_rover>(self.x_target-self.distance_error) and self.x_rover<(self.x_target+self.distance_error)) and (self.y_rover>(self.x_target-self.distance_error) and self.y_rover<(self.y_target+self.distance_error))
 		return var
 	def followGPS2(self):
 		if(self.state==0):
+			state = Int8()
+			arrived = Bool()
 			print("Entered Follow GPS 5")
 			if(self.target_coordinates[0]!=None and self.target_coordinates[1]!=None):
 				if(self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0):
 			
-					self.dX,self.dY = ll2xy(self.target_coordinates[0],self.target_coordinates[1],self.orglat,self.orglong)
-					state = Int8()
-					arrived = Bool()
-					
-					target_angle = self.calc_angle()
-
-					self.angle_correction(target_angle)
-			
+					self.x_target,self.y_target = ll2xy(self.target_coordinates[0],self.target_coordinates[1],self.orglat,self.orglong)
 					distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
 					
+					target_angle = self.calc_angle()
+					self.angle_correction(target_angle)
+			
 					start_time = time.time()
 					WITHIN_RANGE = False
 			
 					while(distance>1.5): 
-						self.update_position()
-						self.dX,self.dY = ll2xy(self.target_coordinates[0],self.target_coordinates[1],self.orglat,self.orglong)
+						self.x_target,self.y_target = ll2xy(self.target_coordinates[0],self.target_coordinates[1],self.orglat,self.orglong)
 						distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
 						current_time = time.time()
 						target_angle = self.calc_angle()
-						if((int(current_time)-int(start_time))%8.0==0.0):
+
+						if((current_time-start_time)>self.time_constant):
 							start_time = time.time()
-							if(not((self.angle>(target_angle-0.1)) and (self.angle<(target_angle+0.1)))):
-								print("Distancia ",distance)
+							if(not((self.yaw_angle>(target_angle-0.1)) and (self.yaw_angle<(target_angle+0.1)))):
 								self.angle_correction(target_angle)
 						else:
 							distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
 							self.twist.linear.x = self.linear_velocity
 							
 							#if(distance < 20):
-								#print("WITsHIN RANGE")
+								#print("WITHIN RANGE")
 							#	WITHIN_RANGE=True
 							#	if(not WITHIN_RANGE):
 							#		self.angle_correction(self.calc_angle())
@@ -213,17 +174,18 @@ class Follow_GPS(Node):
 							#else:
 							#	self.twist.linear.x = self.linear_velocity
 							if(self.check_coord_precision()):
-								print("Coord precision stopped the process")
-								print(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.dX, self.dY}")
+								self.get_logger().info("Coord precision stopped de process")
+								self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
 								break
 							if(self.check_distance_precision()):
-								print(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.dX, self.dY}")
+								self.get_logger().info("Distance precision stopped de process")
+								self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
 								break					
 
 							self.cmd_vel.publish(self.twist)
 					
 					print("Distance was : ",distance)
-					print(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.dX, self.dY}")
+					print(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
 					
 					self.twist.linear.x = 0.0
 					self.twist.angular.z = 0.0
