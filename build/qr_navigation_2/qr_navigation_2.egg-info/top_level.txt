@@ -1,2 +1,0 @@
-qr_navigation_2
-qr_navigation_2/submodules
