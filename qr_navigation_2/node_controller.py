@@ -102,7 +102,7 @@ class NodeController(Node):
 			arrived_msg = Bool()
 			arrived_msg.data = True
 			if self.target_function == "gps_only":
-				print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+				
 				self.pub_arrived.publish(arrived_msg)
 				print(f"Finished {self.target_function}")
 				self.target_function=""
@@ -113,7 +113,7 @@ class NodeController(Node):
 				self.pub_state.publish(self.state)
 				print (f"{self.state.data}")
 			elif self.target_function == "gps_aruco" and self.state.data==4:
-				print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+				
 				self.pub_arrived.publish(arrived_msg)
 				print(f"Finished {self.target_function}")
 				self.target_function=""
