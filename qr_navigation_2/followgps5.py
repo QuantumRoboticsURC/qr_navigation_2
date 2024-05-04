@@ -154,7 +154,7 @@ class Follow_GPS(Node):
 		print("Coord actual ", self.x_rover,self.y_rover)
 
 		self.twist.linear.x = 0.0
-		sign = self.direction_planner(target_angle)
+		sign = self.direction_planner2(target_angle)
   
 		while(not ((self.angle > (target_angle-0.05)) and (self.angle < (target_angle+0.05)))):
 			self.twist.angular.z = sign*(abs((abs(self.angle-target_angle) - 0.0)) * (self.angular_velocity- 0.08) / (2*math.pi - 0) + 0.08)

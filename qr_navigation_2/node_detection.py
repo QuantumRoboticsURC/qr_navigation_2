@@ -19,16 +19,16 @@ from ultralytics import YOLO
 class Detections(Node):
    
 	def __init__(self):
-		super().__init__("Detection_node")
+		super().__init__("detection_node")
 		timer_group = MutuallyExclusiveCallbackGroup()
 		listener_group = ReentrantCallbackGroup()
-		self.publisher_ = self.create_publisher(Image, 'camera/image', 10)
-		self.center_approach = self.create_publisher(CA,"center_approach",10)
-		self.obstacle = self.create_publisher(Bool,"object_detected",1)
+		self.publisher_ = self.create_publisher(Image, '/camera/image', 10)
+		self.center_approach = self.create_publisher(CA,"/center_approach",10)
+		self.obstacle = self.create_publisher(Bool,"/object_detected",1)
 		self.twist = Twist()
-		self.found_aruco = self.create_publisher(Bool, "detected_aruco", 1)
-		self.found_orange = self.create_publisher(Bool, "detected_orange", 1)
-		self.found = self.create_publisher(Bool, "detected_bottle", 1)
+		self.found_aruco = self.create_publisher(Bool, "/detected_aruco", 1)
+		self.found_orange = self.create_publisher(Bool, "/detected_orange", 1)
+		self.found = self.create_publisher(Bool, "/detected_bottle", 1)
 		self.CA = CA()
 		self.bridge = CvBridge()
 		self.state_pub = self.create_publisher(Int8, "/state", 1)
@@ -42,7 +42,6 @@ class Detections(Node):
 		self.vel_y = 0
 		self.vel_theta = 0.1
 		#self.model = YOLO("yolov8n.pt")
-		
 		self.x = 0
 		self.y = 0
 		self.distance = None
@@ -85,7 +84,7 @@ class Detections(Node):
 		self.zed = sl.Camera()
 
 		self.quality = 21 
-		self.create_subscription(Int8, "image_quality", self.quality_callback, 1)
+		self.create_subscription(Int8, "/image_quality", self.quality_callback, 1)
 
 		input_type = sl.InputType()
 		#if args.svo is not None:
@@ -102,7 +101,7 @@ class Detections(Node):
 		# Open the camera
 		status = self.zed.open(self.init_params)
 		if status != sl.ERROR_CODE.SUCCESS: #Ensure the camera has opened succesfully
-			print("Camera Open : "+repr(status)+". Exit program.")
+			self.get_logger().info("Camera Open : "+repr(status)+". Exit program.")
 			exit()
 		
 		# Create and set RuntimeParameters after opening the camera
@@ -118,7 +117,8 @@ class Detections(Node):
 		
 		self.mirror_ref = sl.Transform()
 		self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
-
+		self.x_zed = 0.0
+		self.y_zed = 0.0
 		#self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
 		self.timer = self.create_timer(0.0001,self.detect, callback_group=timer_group)
 	
@@ -139,15 +139,16 @@ class Detections(Node):
 				cx = int(x + w / 2.0)
 				cy = int(y + h / 2.0)
 				print(f"x,y: {cx}, {cy}")
+				self.get_logger().info(f"x,y: {cx}, {cy}")
+				
 				self.x = cx
 				self.y = cy
-				print("Objeto naranja detectado")
+				self.get_logger().info("Objeto naranja detectado")
 
 		else:
 			self.orange_dis = False
 			self.contador = 0
-			print("Objeto naranja no detectado")
-
+			self.get_logger().info("Objeto naranja no detectado")
 		return image
 	
 	def aruco_display(self,corners, ids, rejected, image):
@@ -172,7 +173,7 @@ class Detections(Node):
 				cX = int((topLeft[0] + bottomRight[0]) / 2.0)
 				cY = int((topLeft[1] + bottomRight[1]) / 2.0)
 				cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
-				print(f"x,y: {cX},{cY}")
+				self.get_logger().info(f"x,y: {cX},{cY}")
 				self.x=cX
 				self.y=cY
 				cv2.putText(image, str(markerID),(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
@@ -200,16 +201,15 @@ class Detections(Node):
 
 					cx = int(x + (x2 - x) / 2.0)
 					cy = int(y + (y2 - y) / 2.0)
-					print(f"x,y: {cx}, {cy}")
+					self.get_logger().info(f"x,y: {cx}, {cy}")
 					self.x = cx
 					self.y = cy
-					print("Botella detectada")
+					self.get_logger().info("Botella detectada")
 
 		else:
 			self.bottle_dis = False
 			self.contador = 0
-			print("Botella no detectada")
-
+			self.get_logger().info("Botella no detectada")
 		return frame
 		
   # Listener de calidad de Imagen
@@ -276,6 +276,9 @@ class Detections(Node):
 				# Retrieve left image
 				# self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+				self.x_zed = round(self.image.get_width() / 2)
+				self.y_zed = round(self.image.get_height() / 2)
+
 				self.image_ocv = self.image.get_data()
 				# Retrieve depth map. Depth is aligned on the left image
 				self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
@@ -305,13 +308,13 @@ class Detections(Node):
 					# Determinar la posición relativa
 					if centro_objeto[0] < centro_imagen[0] - 50:
 						self.posicion = "A la izquierda"
-						print("A la izquierda")
+						self.get_logger().info("A la izquierda")
 					elif centro_objeto[0] > centro_imagen[0] + 50:
 						self.posicion = "A la derecha"
-						print("A la derecha")
+						self.get_logger().info("A la derecha")
 					else:
 						self.posicion = "Centrado"
-						print("Centrado")
+						self.get_logger().info("Centrado")
 
 					# Dibujar un rectángulo alrededor del objeto naranja
 					cv2.rectangle(self.image_ocv, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -322,44 +325,45 @@ class Detections(Node):
 					err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
 					#distance = 0
 					if math.isfinite(point_cloud_value[2]):
+						self.get_logger().info("Checking math")
 						detected = Bool()
 						if self.contador >= 2:
+							self.get_logger().info("Martillo encontrado con contador "+str(self.contador))
 							detected.data = True
-							self.found.publish(detected)
+							self.found_orange.publish(detected)
 							self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 												point_cloud_value[1] * point_cloud_value[1] +
 												point_cloud_value[2] * point_cloud_value[2])
-							print(f"Distance to Object at {{{self.x};{self.y}}}: {self.distance}")
-							print(f"Contador: {self.contador}")
+							self.get_logger().info(f"Distance to Object at {{{self.x};{self.y}}}: {self.distance}")
+							self.get_logger().info(f"Contador: {self.contador}")
 							
-							self.x_zed = round(self.image.get_width() / 2)
-							self.y_zed = round(self.image.get_height() / 2)
 							cv2.circle(detected_orange, (self.x_zed, self.y_zed),4,(0,0,255),-1)
 							
-							print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+							self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
 							
 							self.CA.distance = self.distance
 							self.CA.x = self.x - self.x_zed
 							if self.x > (self.x_zed+20):
-								print(f"Objeto a la derecha por: {self.x_zed - self.x} pixeles")
+								self.get_logger().info(f"Objeto naranja a la derecha por: {self.x_zed - self.x} pixeles")
 								self.CA.detected = False
 							elif self.x < (self.x_zed-20):
-								print(f"Objeto a la izquierda por: {self.x - self.x_zed} pixeles")
+								self.get_logger().info(f"Objetonaranja a la izquierda por: {self.x - self.x_zed} pixeles")
 								self.CA.detected = False
 							elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
-								print(f"Objeto al centro")
+								self.get_logger().info(f"Objeto al centro")
 								cv2.putText(detected_orange, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 								self.CA.detected = True
 							self.center_approach.publish(self.CA)
 						else:
 							self.distance=None
-							print("Not detected ",self.orange_dis)
+							self.get_logger().info("Not detected "+str(self.orange_dis))
+							self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
 
 					cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 					cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 					self.cv2_to_imgmsg(detected_orange)
 					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
-					self.get_logger().info("Publicando video")
+					#self.get_logger().info("Publicando video")
 				
 				else:      
 					self.cv2_to_imgmsg(detected_orange)
@@ -370,6 +374,8 @@ class Detections(Node):
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 				# Retrieve left image
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+				self.x_zed = round(self.image.get_width() / 2)
+				self.y_zed = round(self.image.get_height() / 2)
 				self.image_ocv = self.image.get_data()
 				# Retrieve depth map. Depth is aligned on the left image
 				self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
@@ -391,45 +397,48 @@ class Detections(Node):
 					detected = Bool()
 					if self.contador >= 2:
 						detected.data = True
+						self.get_logger().info("Aruco encontrado")
 						self.found_aruco.publish(detected)
 						self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 											point_cloud_value[1] * point_cloud_value[1] +
 											point_cloud_value[2] * point_cloud_value[2])
-						print(f"Distance to Aruco at {{{self.x};{self.y}}}: {self.distance}")
-						print(f"Contador: {self.contador}")
+						self.get_logger().info(f"Distance to Aruco at {{{self.x};{self.y}}}: {self.distance}")
+						self.get_logger().info(f"Contador: {self.contador}")
 						
 						self.x_zed = round(self.image.get_width() / 2)+self.PIXEL_DISTANCE
 						self.y_zed = round(self.image.get_height() / 2)
 						cv2.circle(detected_markers, (self.x_zed, self.y_zed),4,(0,0,255),-1)
 						
-						print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+						self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
 						
 						self.CA.distance = self.distance
 						self.CA.x = self.x - self.x_zed
 	  
 						if self.x > (self.x_zed+self.PIXEL_DISTANCE):
-							print(f"Aruco a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
+							self.get_logger().info(f"Aruco a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 							self.CA.detected = False
 						elif self.x < (self.x_zed-self.PIXEL_DISTANCE):
-							print(f"Aruco a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
+							self.get_logger().info(f"Aruco a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 							self.CA.detected = False
 						else: #self.x >= (self.x_zed-50) and self.x <= (self.x_zed+50):
-							print(f"Aruco al centro")
+							self.get_logger().info(f"Aruco al centro")
 							cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 							self.CA.detected = True
 							
 						self.center_approach.publish(self.CA)
 					else:
 						self.distance=None
-						print("Not detected ",self.aruco_dis)
+						self.get_logger().info("Not detected " + str(self.aruco_dis))
 			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
-			self.get_logger().info("Publicando video")
+			#self.get_logger().info("Publicando video")
 		
 		elif self.state==2:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 				# Retrieve left image
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
+				self.x_zed = round(self.image.get_width() / 2)
+				self.y_zed = round(self.image.get_height() / 2)
 				self.image_ocv = self.image.get_data()
 				# Retrieve depth map. Depth is aligned on the left image
 				self.zed.retrieve_measure(self.depth, sl.MEASURE.DEPTH)
@@ -465,13 +474,13 @@ class Detections(Node):
 							# Determinar la posición relativa
 							if centro_objeto[0] < centro_imagen[0] - 50:
 								self.posicion = "A la izquierda"
-								print("A la izquierda")
+								self.get_logger().info("A la izquierda")
 							elif centro_objeto[0] > centro_imagen[0] + 50:
 								self.posicion = "A la derecha"
-								print("A la derecha")
+								self.get_logger().info("A la derecha")
 							else:
 								self.posicion = "Centrado"
-								print("Centrado")
+								self.get_logger().info("Centrado")
 
 	
 							# Publicar información sobre la botella detectada
@@ -480,48 +489,48 @@ class Detections(Node):
 								detected = Bool()
 								if self.contador >= 2:
 									detected.data = True
+									self.get_logger().info("Botella encontrada")
 									self.found.publish(detected)
 									self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 														point_cloud_value[1] * point_cloud_value[1] +
 														point_cloud_value[2] * point_cloud_value[2])
-									print(f"Distance to Bottle at {{{self.x};{self.y}}}: {self.distance}")
-									print(f"Contador: {self.contador}")
+									self.get_logger().info(f"Distance to Bottle at {{{self.x};{self.y}}}: {self.distance}")
+									self.get_logger().info(f"Contador: {self.contador}")
 									
 									self.x_zed = round(self.image.get_width() / 2)
 									self.y_zed = round(self.image.get_height() / 2)
 									cv2.circle(detected_bottle, (self.x_zed, self.y_zed),4,(0,0,255),-1)
 									
-									print(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+									self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
 									
 									self.CA.distance = self.distance
 									self.CA.x = self.x - self.x_zed
 									if self.x > (self.x_zed+50):
-										print(f"Botella a la derecha por: {self.x_zed - self.x} pixeles")
+										self.get_logger().info(f"Botella a la derecha por: {self.x_zed - self.x} pixeles")
 										self.CA.detected = False
 									elif self.x < (self.x_zed-50):
-										print(f"Botella a la izquierda por: {self.x - self.x_zed} pixeles")
+										self.get_logger().info(f"Botella a la izquierda por: {self.x - self.x_zed} pixeles")
 										self.CA.detected = False
 									else: #self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
-										print(f"Botella al centro")
+										self.get_logger().info(f"Botella al centro")
 										cv2.putText(detected_bottle, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 										self.CA.detected = True
 									self.center_approach.publish(self.CA)
 								else:
 									self.distance=None
-									print("Not detected ",self.bottle_dis)
+									self.get_logger().info("Not detected " + str(self.bottle_dis))
 
 							cv2.putText(detected_bottle, f"Distancia: {self.distance}", (max_bbox[0], max_bbox[1] - 64),
 										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 							cv2.putText(detected_bottle, f"Posicion: {self.posicion}", (max_bbox[0], max_bbox[1] - 37),
 										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, self.quality))
-							self.get_logger().info("Publicando video")
+							#self.get_logger().info("Publicando video")
 
 						else:
 							self.distance = None
-							print("Not detected ", self.bottle_dis)
+							self.get_logger().info("Not detected "+ str(self.bottle_dis))
 							self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, self.quality))
-							self.get_logger().info("Publicando video sin deteccion")
  
 				else:
 					self.publisher_.publish(self.cv2_to_imgmsg_resized_bottle(detected_bottle, self.quality))
@@ -545,7 +554,7 @@ class Detections(Node):
 					self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 										point_cloud_value[1] * point_cloud_value[1] +
 										point_cloud_value[2] * point_cloud_value[2])
-					print(self.distance)
+					self.get_logger().info(self.distance)
 					if(self.distance<650):
 						object = Bool()
 						object.data = True

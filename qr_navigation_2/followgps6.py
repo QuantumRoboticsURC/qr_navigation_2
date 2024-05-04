@@ -74,11 +74,12 @@ class Follow_GPS(Node):
 		self.state = -1
 		#Errors for the distance and coordinate stoppage routines
 		self.coordinate_error = 0.00005  
-		self.distance_error = 1.0
+		self.distance_error = 1.2
 		#Angle error for correction
 		self.angle_error = 0.05
 		#Variable for range distance
-		self.range_distance = 10
+		self.range_distance = 1.0
+		self.just_started = False
 		#Main
 		self.timer = self.create_timer(0.0001,self.followGPS,callback_group=timer_group)
 		
@@ -126,8 +127,8 @@ class Follow_GPS(Node):
 		ang_error = target_angle-self.yaw_angle
 		ang_error_adj=math.atan2(math.sin(ang_error),math.cos(ang_error))
 		if(ang_error_adj>0):
-			return -1
-		return 1
+			return 1
+		return -1
 			
 
 	def angle_correction(self,target_angle):
@@ -135,7 +136,8 @@ class Follow_GPS(Node):
 		self.get_logger().info("Correcting angle")
 		self.twist.linear.x = 0.0
 		sign = self.direction_planner2(target_angle)
-  
+		self.get_logger().info(f"Current angle {self.yaw_angle}")
+		self.get_logger().info(f"Target angle: {target_angle}")
 		while(not ((self.yaw_angle > (target_angle-self.angle_error)) and (self.yaw_angle < (target_angle+self.angle_error)))):
 			self.twist.angular.z = sign*self.angular_velocity
 			self.cmd_vel.publish(self.twist) 
@@ -158,7 +160,9 @@ class Follow_GPS(Node):
 		if(self.state==0): #Checks if the state is the one assigned to FGPS
 			state = Int8()
 			arrived = Bool()
-			self.get_logger().info("Entered Follow GPS v6")
+			if(not self.just_started):
+				self.get_logger().info("Entered Follow GPS v6.1")
+				self.just_started=True
 			if(self.target_coordinates[0]!=None and self.target_coordinates[1]!=None): #Checks that the target coordinates are not null
 				if(self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0): #Checks that the gps readings are valid
 					
@@ -185,6 +189,8 @@ class Follow_GPS(Node):
 						if((current_time-start_time)>self.time_constant and (not WITHIN_RANGE)): #checks that the time condition difference is met and the rover is not close enough to the destination
 							#resets start time
 							start_time = time.time()
+							self.get_logger().info(f"Currently at ({self.x_rover},{self.y_rover})")
+							self.get_logger().info(f"Target at ({self.x_target},{self.y_target})")
 							#Checks if the current angle has deviated from the target angle 
 							if(not((self.yaw_angle>(target_angle-self.angle_error*2)) and (self.yaw_angle<(target_angle+self.angle_error*2)))):
 								self.angle_correction(target_angle)
@@ -203,15 +209,15 @@ class Follow_GPS(Node):
         
 						if(self.check_coord_precision()):
 							self.get_logger().info("Coord precision stopped de process")
-							self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
+							self.get_logger().info(f"Finished at {self.x_rover},{self.y_rover} \nTarget position was {self.x_target}, {self.y_target}")
 							break
 						if(self.check_distance_precision()):
 							self.get_logger().info("Distance precision stopped de process")
-							self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
+							self.get_logger().info(f"Finished at {self.x_rover},{self.y_rover} \nTarget position was {self.x_target}, {self.y_target}")
 							break					
 
 					#Information regarding the final conditions
-					self.get_logger().info("Distance was : ",distance)
+					self.get_logger().info(f"Distance was :{distance}")
 					self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
 					
 					#Sets all values to zero or default

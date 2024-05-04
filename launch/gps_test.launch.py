@@ -5,26 +5,33 @@ import launch
 
 
 def generate_launch_description():
-    joy_dev = launch.substitutions.LaunchConfiguration('joy_dev')
 
-    return LaunchDescription([
-        launch.actions.DeclareLaunchArgument(),
-        Node(
+    return launch.LaunchDescription([
+        #launch.actions.DeclareLaunchArgument(),
+        launch_ros.actions.Node(
             package='qr_navigation_2',
             executable='followGPS',
             name='go_to_gps',
+            output='screen'
             
         ),
-        Node(
+        launch_ros.actions.Node(
             package ='qr_navigation_2',
             executable='center_approach',
-            name='center'
+            name='center_approach',
+            output='screen'
         ),
-        Node(
+        launch_ros.actions.Node(
             
             package='qr_navigation_2',
             executable='controller',
             name='node_controller',
+            output='screen'
+        ),
+        launch_ros.actions.Node(
+            package='qr_navigation_2',
+            executable='searching',
+            name='searching',
             output='screen'
         )
         

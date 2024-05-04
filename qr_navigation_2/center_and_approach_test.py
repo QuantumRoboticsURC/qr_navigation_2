@@ -6,16 +6,16 @@ from custom_interfaces.msg import CA
 
 class Center_approach(Node):
     def __init__(self):
-        super().__init__("center")
+        super().__init__("center_approach")
         #subscriptions to the messages on the node controller and the node detection
-        self.create_subscription(CA, "center_approach", self.callback,10)
-        self.create_subscription(Bool, "detected_aruco", self.aruco, 1)
-        self.create_subscription(Bool,"detected_orange",self.orange,1)
+        self.create_subscription(CA, "/center_approach", self.callback,10)
+        self.create_subscription(Bool, "/detected_aruco", self.aruco, 1)
+        self.create_subscription(Bool,"/detected_orange",self.orange,1)
         self.create_subscription(Int8,"/state",self.update_state,1)
         
         #Publishers to give feedback to the controller
-        self.arrived = self.create_publisher(Bool, "arrived_ca", 10)
-        self.cmd_vel_ca = self.create_publisher(Twist, "cmd_vel_ca", 10)
+        self.arrived = self.create_publisher(Bool, "/arrived_ca", 10)
+        self.cmd_vel_ca = self.create_publisher(Twist, "/cmd_vel_ca", 10)
         self.state_pub = self.create_publisher(Int8,"/state",1)
         #default state value
         self.state = -1
@@ -35,6 +35,7 @@ class Center_approach(Node):
         self.pixel_constante = 50
         self.center_distance_constant = 1200
         self.min_distance_constant = 1300
+        self.relation = {2:" bottle ",3:" hammer ",4:" aruco"}
         
         self.timer = self.create_timer(0.0001, self.center_and_approach)
     
@@ -58,7 +59,7 @@ class Center_approach(Node):
         self.found = msg.data
         
     def approach(self):
-        "Approaches the object while the distance to its is above the threshold "
+        '''Approaches the object while the distance to its is above the threshold'''
         self.Twist.angular.z = 0.0
         arrived = Bool()
         state = Int8()
@@ -81,18 +82,19 @@ class Center_approach(Node):
     def center_and_approach(self):
         if(self.state in [2,3,4]):
             if (self.found):
+                self.get_logger().info(f"Estoy en center and approachs")
                 if(not self.finish):
                     if (self.center):
-                        self.get_logger().info("The object is centered")
+                        self.get_logger().info(f"The {self.relation[self.state]} is centered")
                         self.approach()
-                    elif (self.x+self.pixel_constante*(self.center_distance_constant/self.distance)  < 0):
+                    elif (self.x+self.pixel_constante*(self.center_distance_constant/(self.distance+0.01))  < 0):
                         self.Twist.linear.x = 0.0
                         self.Twist.angular.z = self.vel_theta
-                        self.get_logger().info("The object is on the left")
-                    elif (self.x-self.pixel_constante*(self.center_distance_constant/self.distance) > 0):
+                        self.get_logger().info(f"The {self.relation[self.state]} is on the left")
+                    elif (self.x-self.pixel_constante*(self.center_distance_constant/(self.distance+0.01)) > 0):
                         self.Twist.linear.x = 0.0
                         self.Twist.angular.z = -self.vel_theta
-                        self.get_logger().info("The object is on the right")
+                        self.get_logger().info(f"The {self.relation[self.state]}  is on the right")
                     self.cmd_vel_ca.publish(self.Twist)    
     
 def main(args=None):

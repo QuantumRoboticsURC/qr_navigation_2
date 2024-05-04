@@ -125,8 +125,8 @@ class Follow_GPS(Node):
 		ang_error = target_angle-self.yaw_angle
 		ang_error_adj=math.atan2(math.sin(ang_error),math.cos(ang_error))
 		if(ang_error_adj>0):
-			return -1
-		return 1
+			return 1
+		return -1
 			
 
 	def angle_correction(self,target_angle):
@@ -141,6 +141,11 @@ class Follow_GPS(Node):
 
 		self.twist.angular.z=0.0
 		self.cmd_vel.publish(self.twist)
+
+
+	def look_for_target(self):
+		target_angle = self.yaw_angle+(2*math.pi-0.05)
+		self.angle_correction(target_angle)
 
 	def check_coord_precision(self):
 		'''Boolean expression for the coordinate precision stoppage routine'''
@@ -212,7 +217,7 @@ class Follow_GPS(Node):
 					#Information regarding the final conditions
 					self.get_logger().info("Distance was : ",distance)
 					self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
-					
+					self.look_for_target()
 					#Sets all values to zero or default
 					self.twist.linear.x = 0.0
 					self.twist.angular.z = 0.0
@@ -227,7 +232,7 @@ class Follow_GPS(Node):
 					self.state_pub.publish(state)
 					self.cmd_vel.publish(self.twist)
 
-					time.sleep(5)
+					time.sleep(1)
 
 
 def main(args=None):
