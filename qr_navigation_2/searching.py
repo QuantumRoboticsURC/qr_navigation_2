@@ -95,7 +95,7 @@ class Searching(Node):
 		self.coordinate_error = 0.00005  
 		self.distance_error = 1.0
 
-		self.timer = self.create_timer(0.01, self.timer_callback,callback_group=timer_group)
+		self.timer = self.create_timer(0.001, self.timer_callback,callback_group=timer_group)
 
 	
 	def set_default_configuration(self):

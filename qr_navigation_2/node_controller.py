@@ -34,7 +34,7 @@ class NodeController(Node):
 		# Contenedores
 		self.parameters = {0: "gps_only", 1: "gps_aruco", 2: "gps_hammer", 3: "gps_bottle"}
 		self.target_function = ""
-		self.timer = self.create_timer(0.05, self.controller)
+		self.timer = self.create_timer(0.001, self.controller)
 
 	# Callbacks para los tópicos suscritos
 	def go_start(self, msg):

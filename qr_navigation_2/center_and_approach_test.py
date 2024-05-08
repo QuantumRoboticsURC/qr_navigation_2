@@ -37,7 +37,7 @@ class Center_approach(Node):
         self.min_distance_constant = 1300
         self.relation = {2:" bottle ",3:" hammer ",4:" aruco"}
         
-        self.timer = self.create_timer(0.0001, self.center_and_approach)
+        self.timer = self.create_timer(0.001, self.center_and_approach)
     
     
     def update_state(self,msg):

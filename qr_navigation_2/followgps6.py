@@ -81,7 +81,7 @@ class Follow_GPS(Node):
 		self.range_distance = 1.0
 		self.just_started = False
 		#Main
-		self.timer = self.create_timer(0.0001,self.followGPS,callback_group=timer_group)
+		self.timer = self.create_timer(0.001,self.followGPS,callback_group=timer_group)
 		
 	
 	def update_target(self,msg):

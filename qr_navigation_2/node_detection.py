@@ -83,7 +83,7 @@ class Detections(Node):
 		
 		self.zed = sl.Camera()
 
-		self.quality = 21 
+		self.quality = 10 
 		self.create_subscription(Int8, "/image_quality", self.quality_callback, 1)
 
 		input_type = sl.InputType()
@@ -120,7 +120,7 @@ class Detections(Node):
 		self.x_zed = 0.0
 		self.y_zed = 0.0
 		#self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
-		self.timer = self.create_timer(0.0001,self.detect, callback_group=timer_group)
+		self.timer = self.create_timer(0.00001,self.detect, callback_group=timer_group)
 	
 	
 	def orange_display(self, contours, image):
@@ -343,6 +343,7 @@ class Detections(Node):
 							
 							self.CA.distance = self.distance
 							self.CA.x = self.x - self.x_zed
+							
 							if self.x > (self.x_zed+20):
 								self.get_logger().info(f"Objeto naranja a la derecha por: {self.x_zed - self.x} pixeles")
 								self.CA.detected = False
@@ -361,13 +362,13 @@ class Detections(Node):
 
 					cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 					cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-					self.cv2_to_imgmsg(detected_orange)
-					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
+					#self.cv2_to_imgmsg(detected_orange)
+					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange,self.quality))
 					#self.get_logger().info("Publicando video")
 				
 				else:      
-					self.cv2_to_imgmsg(detected_orange)
-					self.publisher_.publish(self.cv2_to_imgmsg(detected_orange))
+					#self.cv2_to_imgmsg(detected_orange)
+					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange,self.quality))
 					self.get_logger().info("Publicando video sin deteccion")
 
 		elif self.state == 4:
@@ -554,7 +555,7 @@ class Detections(Node):
 					self.distance = math.sqrt(point_cloud_value[0] * point_cloud_value[0] +
 										point_cloud_value[1] * point_cloud_value[1] +
 										point_cloud_value[2] * point_cloud_value[2])
-					self.get_logger().info(self.distance)
+					self.get_logger().info("Distancia "+str(self.distance))
 					if(self.distance<650):
 						object = Bool()
 						object.data = True
