@@ -81,7 +81,7 @@ class SearchAuxiliar(Node):
 	
 	def update_coords(self,data):
 		'''Updates the coordinates based on the data given by the GPS'''
-		if(self.HAS_STARTED):
+		if(self.HAS_STARTED and self.state in [2,3,4]):
 			self.orglong = data.lon/(10000000)
 			self.orglat = data.lat/(10000000)
 			self.HAS_STARTED = False
