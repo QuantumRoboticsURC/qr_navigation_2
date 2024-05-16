@@ -81,14 +81,15 @@ class SearchAuxiliar(Node):
 	
 	def update_coords(self,data):
 		'''Updates the coordinates based on the data given by the GPS'''
-		if(self.HAS_STARTED and self.state in [2,3,4]):
-			self.orglong = data.lon/(10000000)
-			self.orglat = data.lat/(10000000)
-			self.HAS_STARTED = False
-		self.gps_coordinates[0]=data.lat/(10000000)
-		self.gps_coordinates[1]=data.lon/(10000000)
-		if(not self.HAS_STARTED):
-			self.update_position()
+		if(self.state in [2,3,4]):
+			if(self.HAS_STARTED):
+				self.orglong = data.lon/(10000000)
+				self.orglat = data.lat/(10000000)
+				self.HAS_STARTED = False
+			self.gps_coordinates[0]=data.lat/(10000000)
+			self.gps_coordinates[1]=data.lon/(10000000)
+			if(not self.HAS_STARTED):
+				self.update_position()
 
 	def update_angle(self,msg):
 		'''Updates the angle with the Imu's readings'''
