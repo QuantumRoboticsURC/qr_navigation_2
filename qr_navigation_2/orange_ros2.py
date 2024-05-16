@@ -140,10 +140,13 @@ class Detect_Object(Node):
             detected_orange = self.orange_display(self.corners, self.image_ocv)
             if self.corners:
 
+                
+
                 ht, wd = self.image_ocv.shape[:2]
 
                 # Encontrar el contorno más grande
                 max_contour = max(self.corners, key=cv2.contourArea)
+                print(cv2.contourArea(max_contour))
 
                 # Obtener el rectángulo delimitador
                 x, y, w, h = cv2.boundingRect(max_contour)
@@ -182,6 +185,7 @@ class Detect_Object(Node):
                                             point_cloud_value[1] * point_cloud_value[1] +
                                             point_cloud_value[2] * point_cloud_value[2])
                         print(f"Distance to Object at {{{self.x};{self.y}}}: {self.distance}")
+                        print(cv2.contourArea(max_contour)) 
                         print(f"Contador: {self.contador}")
                         
                         self.x_zed = round(self.image.get_width() / 2)
