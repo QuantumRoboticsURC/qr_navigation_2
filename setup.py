@@ -27,7 +27,8 @@ setup(
                             'bottle=qr_navigation_2.bottle_detection:main','bottle_ros2=qr_navigation_2.bottle_detection_test:main',
                             'node_detection_ros2=qr_navigation_2.node_detection:main',
                             'web_inter = qr_navigation_2.intermediary_web:main',
-                            'searching=qr_navigation_2.searching:main'
+                            'searching=qr_navigation_2.searching:main',
+                            'auxiliary_search=qr_navigation_2.auxiliary_search:main'
         ],
     },
 )
