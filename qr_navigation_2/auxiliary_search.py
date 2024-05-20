@@ -134,7 +134,9 @@ class SearchAuxiliar(Node):
 	  
 	def rotate(self):
 		target = ((self.yaw_angle+(math.pi))+2*math.pi)%(2*math.pi)
+		target2 = ((self.yaw_angle-(math.pi))+2*math.pi)%(2*math.pi)
 		self.angle_correction(target)
+		self.angle_correction(target2)
 
 		
 	def go_to_point(self,x,y):
@@ -147,7 +149,13 @@ class SearchAuxiliar(Node):
 			if(self.current_point!=self.route[len(self.route)-1]):
 				if(not self.found):
 					for x,y in self.route:
+						self.current_point = (x,y)
 						self.go_to_point(x,y)
+			if(self.current_point==self.route[len(self.route)-1]):
+					for i in range(len(self.route)-1,-1,-1):
+						self.current_point = self.route[i]
+						self.go_to_point(x,y)
+       
 		
 	
 def main(args=None):
