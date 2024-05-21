@@ -53,7 +53,7 @@ class Follow_GPS(Node):
 		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state,1,callback_group=listener_group)
 		#Velocity data
 		self.twist = Twist()
-		self.linear_velocity = 0.16
+		self.linear_velocity = 0.25
 		self.angular_velocity = 0.1
 		
 		#Coordinates and position on the plane
@@ -67,16 +67,16 @@ class Follow_GPS(Node):
 		self.orglong = 0.0
 		self.orglat = 0.0
 		#Constant for time checker
-		self.time_constant=8.0
+		self.time_constant=1.0
 		#Flag for the initial coordinate registered
 		self.HAS_STARTED = True
 		#Default value of the state
 		self.state = -1
 		#Errors for the distance and coordinate stoppage routines
-		self.coordinate_error = 0.00005  
+		self.coordinate_error = 0.000005  
 		self.distance_error = 1.2
 		#Angle error for correction
-		self.angle_error = 0.05
+		self.angle_error = 0.08
 		#Variable for range distance
 		self.range_distance = 1.0
 		self.just_started = False
@@ -130,7 +130,12 @@ class Follow_GPS(Node):
 			return 1
 		return -1
 			
-
+	def distances(self):
+		y_distance = abs(self.y_rover-self.y_target)
+		x_distance = abs(self.x_rover-self.x_target)
+		distance = math.sqrt(math.pow(y_distance,2)+math.pow(x_distance,2))
+		return distance
+	
 	def angle_correction(self,target_angle):
 		'''Corrects the rover's angle based on its current position and target angle'''
 		self.get_logger().info("Correcting angle")
@@ -164,6 +169,7 @@ class Follow_GPS(Node):
 				self.get_logger().info("Entered Follow GPS v6.1")
 				self.just_started=True
 			if(self.target_coordinates[0]!=None and self.target_coordinates[1]!=None): #Checks that the target coordinates are not null
+				self.get_logger().info(f"The target coordinates are {self.target_coordinates}")
 				if(self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0): #Checks that the gps readings are valid
 					
 					#calculates the target x,y using the target coords and the origin
@@ -178,7 +184,7 @@ class Follow_GPS(Node):
 					start_time = time.time()
 					WITHIN_RANGE = False
 			
-					while(distance>1.5): #if the distance is less than 1.5 m it stops the routine
+					while(distance>2.5): #if the distance is less than 1.5 m it stops the routine
 						#updates the distance
 						distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
 						#Gets the current time
@@ -191,6 +197,7 @@ class Follow_GPS(Node):
 							start_time = time.time()
 							self.get_logger().info(f"Currently at ({self.x_rover},{self.y_rover})")
 							self.get_logger().info(f"Target at ({self.x_target},{self.y_target})")
+							self.get_logger().info(f"Currently de distance from x,y is {self.distances()}")
 							#Checks if the current angle has deviated from the target angle 
 							if(not((self.yaw_angle>(target_angle-self.angle_error*2)) and (self.yaw_angle<(target_angle+self.angle_error*2)))):
 								self.angle_correction(target_angle)
@@ -211,13 +218,18 @@ class Follow_GPS(Node):
 							self.get_logger().info("Coord precision stopped de process")
 							self.get_logger().info(f"Finished at {self.x_rover},{self.y_rover} \nTarget position was {self.x_target}, {self.y_target}")
 							break
-						if(self.check_distance_precision()):
-							self.get_logger().info("Distance precision stopped de process")
+						#if(self.check_distance_precision()):
+						#	self.get_logger().info("Distance precision stopped de process")
+						#	self.get_logger().info(f"Finished at {self.x_rover},{self.y_rover} \nTarget position was {self.x_target}, {self.y_target}")
+						#	break
+						if(self.distances()<3.5):
+							self.get_logger().info("Stopped by distances ")
 							self.get_logger().info(f"Finished at {self.x_rover},{self.y_rover} \nTarget position was {self.x_target}, {self.y_target}")
-							break					
+							break
 
 					#Information regarding the final conditions
 					self.get_logger().info(f"Distance was :{distance}")
+					self.get_logger().info(f"Distances was: {self.distances()}")
 					self.get_logger().info(f"Finished at {self.x_rover,self.y_rover} \nTarget position was {self.x_target, self.y_target}")
 					
 					#Sets all values to zero or default
