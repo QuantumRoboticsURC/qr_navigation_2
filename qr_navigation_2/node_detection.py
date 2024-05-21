@@ -14,6 +14,7 @@ import numpy as np
 import cv2
 import math
 from ultralytics import YOLO
+import torch
 
 
 class Detections(Node):
@@ -42,6 +43,8 @@ class Detections(Node):
 		self.vel_y = 0
 		self.vel_theta = 0.1
 		#self.model = YOLO("yolov8n.pt")
+		modelo_yolo = torch.load("yolov8n.pt")
+		self.model = YOLO(modelo_yolo)
 		self.x = 0
 		self.y = 0
 		self.distance = None
