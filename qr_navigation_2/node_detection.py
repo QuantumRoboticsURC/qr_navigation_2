@@ -14,7 +14,7 @@ import numpy as np
 import cv2
 import math
 from ultralytics import YOLO
-import torch
+#import torch
 
 
 class Detections(Node):
@@ -35,16 +35,16 @@ class Detections(Node):
 		self.state_pub = self.create_publisher(Int8, "/state", 1)
 		self.create_subscription(Int8, "/state", self.update_state, 1, callback_group=listener_group)
 
-		#parser = argparse.ArgumentParser()
-		#parser.add_argument('--svo', type=str, default=None, help='optional svo file')
-		#args = parser.parse_args()
+		parser = argparse.ArgumentParser()
+		parser.add_argument('--svo', type=str, default=None, help='optional svo file')
+		args = parser.parse_args()
 		
 		self.vel_x = 0.33
 		self.vel_y = 0
 		self.vel_theta = 0.1
-		#self.model = YOLO("yolov8n.pt")
-		modelo_yolo = torch.load("yolov8n.pt")
-		self.model = YOLO(modelo_yolo)
+		self.model = YOLO("yolov8n.pt")
+		#modelo_yolo = torch.load("yolov8n.pt")
+		#self.model = YOLO(modelo_yolo)
 		self.x = 0
 		self.y = 0
 		self.distance = None
@@ -90,14 +90,14 @@ class Detections(Node):
 		self.create_subscription(Int8, "/image_quality", self.quality_callback, 1)
 
 		input_type = sl.InputType()
-		#if args.svo is not None:
-		#	input_type.set_from_svo_file(args.svo)
+		if args.svo is not None:
+			input_type.set_from_svo_file(args.svo)
 
 		# Crear un objeto InitParameters y establecer parámetros de configuración
 		self.init_params = sl.InitParameters(input_t=input_type, svo_real_time_mode=True)
 
 		# Create a InitParameters object and set configuration parameters
-		#self.init_params = sl.InitParameters()
+		self.init_params = sl.InitParameters()
 		self.init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Use ULTRA depth mode
 		self.init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
 
