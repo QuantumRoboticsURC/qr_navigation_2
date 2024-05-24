@@ -32,7 +32,8 @@ setup(
                             'web_inter = qr_navigation_2.intermediary_web:main',
                             'searching=qr_navigation_2.searching:main',
                             'auxiliary_search=qr_navigation_2.auxiliary_search:main',
-                            'followGPS7=qr_navgation_2.followgps7:main'
+                            'followGPS7=qr_navgation_2.followgps7:main',
+                            'coord=qr_navigation_2.coord_converter:main'
         ],
     },
 )
