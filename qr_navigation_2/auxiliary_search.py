@@ -35,10 +35,10 @@ def euler_from_quaternion(x, y, z, w):
 class SearchAuxiliar(Node):
 	def __init__(self):
 		super().__init__("AuxiliarySearch")
-  
+
 		timer_group = MutuallyExclusiveCallbackGroup()
 		listener_group = ReentrantCallbackGroup()
-  
+
 		self.create_subscription(Bool, "detected_aruco", self.aruco, 1,callback_group=listener_group)
 		self.create_subscription(Bool,"detected_orange",self.orange,1,callback_group=listener_group)
 		self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data,callback_group=listener_group)
@@ -53,12 +53,12 @@ class SearchAuxiliar(Node):
 		self.x_rover = 0.0
 		self.y_rover = 0.0
 		self.yaw_angle = 0.0
-  
+
 		self.angular_velocity = 0.1
 		self.linear_velocity = 0.33
 
 		self.margin = 1.0
-  
+
 		self.route = [(0,0),(0,-4),(-4,4),(-4,0),(-4,4),(0,4),(4,4),(4,0),(4,-4),(4,-8),(0,-8),(-4,-8),(-8,-8),(-8,-4),(-8,8),(-8,12),(-4,12),(0,12),(4,12),(8,12),(12,12)]
 		self.current_point = self.route[0]
 		self.found = False
@@ -66,7 +66,7 @@ class SearchAuxiliar(Node):
 
 	def update_state(self,msg):
 		self.state=msg.data
-  
+
 	def aruco(self, msg): 
 		'''Sets found to true if an aruco was found'''
 		self.found = msg.data
@@ -118,7 +118,7 @@ class SearchAuxiliar(Node):
 		self.get_logger().info("Correcting angle")
 		self.twist.linear.x = 0.0
 		sign = self.direction_planner2(target_angle)
-  
+
 		while(not ((self.yaw_angle > (target_angle-self.angle_error)) and (self.yaw_angle < (target_angle+self.angle_error)))):
 			self.twist.angular.z = sign*self.angular_velocity
 			self.cmd_vel.publish(self.twist) 
@@ -131,16 +131,19 @@ class SearchAuxiliar(Node):
 		while(relative_distance>1.5):
 			self.twist.linear.x=self.linear_velocity
 			self.cmd_vel.publish(self.twist)
-	  
+
 	def rotate(self):
 		target = ((self.yaw_angle+(math.pi))+2*math.pi)%(2*math.pi)
 		target2 = ((self.yaw_angle-(math.pi))+2*math.pi)%(2*math.pi)
 		self.angle_correction(target)
 		self.angle_correction(target2)
 
+	def rotate2(self):
+		target = (self.yaw_angle + 2*math.pi) % (2*math.pi)
+		self.angle_correction(target)
 		
 	def go_to_point(self,x,y):
-		self.rotate()
+		self.rotate2()
 		self.angle_correction(self.calc_angle(x,y))
 		self.move_distance(x,y)
 
