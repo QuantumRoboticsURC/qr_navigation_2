@@ -11,6 +11,7 @@ class Center_approach(Node):
         self.create_subscription(CA, "/center_approach", self.callback,10)
         self.create_subscription(Bool, "/detected_aruco", self.aruco, 1)
         self.create_subscription(Bool,"/detected_orange",self.orange,1)
+        self.create_subscription(Bool,"/detected_bottle",self.bottle,1)
         self.create_subscription(Int8,"/state",self.update_state,1)
         
         #Publishers to give feedback to the controller
@@ -56,6 +57,10 @@ class Center_approach(Node):
         
     def orange(self,msg):
         '''Sets found to true if an orange object is found'''
+        self.found = msg.data
+        
+    def bottle(self,msg):
+        '''Sets found to true if a bottle is found'''
         self.found = msg.data
         
     def approach(self):

@@ -4,7 +4,7 @@ from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from threading import Thread
-from std_msgs.msg import Bool,Int8
+from std_msgs.msg import Bool,Int8,Float64
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 from custom_interfaces.msg import CA
@@ -16,6 +16,19 @@ import math
 from ultralytics import YOLO
 #import torch
 
+def euler_from_quaternion(x, y, z, w):
+	t0 = +2.0 * (w * x + y * z)
+	t1 = +1.0 - 2.0 * (x * x + y * y)
+	roll_x = math.atan2(t0, t1)
+	t2 = +2.0 * (w * y - z * x)
+	t2 = +1.0 if t2 > +1.0 else t2
+	t2 = -1.0 if t2 < -1.0 else t2
+	pitch_y = math.asin(t2)
+	t3 = +2.0 * (w * z + x * y)
+	t4 = +1.0 - 2.0 * (y * y + z * z)
+	yaw_z = math.atan2(t3, t4)
+	return roll_x, pitch_y, yaw_z # in radians
+
 
 class Detections(Node):
    
@@ -26,10 +39,12 @@ class Detections(Node):
 		self.publisher_ = self.create_publisher(Image, '/camera/image', 10)
 		self.center_approach = self.create_publisher(CA,"/center_approach",10)
 		self.obstacle = self.create_publisher(Bool,"/object_detected",1)
+		self.distance_obstacle = self.create_publisher(Int8, "/distance", 1)
 		self.twist = Twist()
 		self.found_aruco = self.create_publisher(Bool, "/detected_aruco", 1)
 		self.found_orange = self.create_publisher(Bool, "/detected_orange", 1)
 		self.found = self.create_publisher(Bool, "/detected_bottle", 1)
+		self.zed_angle = self.create_publisher(Float64, "/zed_angle", 10)
 		self.CA = CA()
 		self.bridge = CvBridge()
 		self.state_pub = self.create_publisher(Int8, "/state", 1)
@@ -122,10 +137,16 @@ class Detections(Node):
 		self.mirror_ref.set_translation(sl.Translation(2.75,4.0,0)) 
 		self.x_zed = 0.0
 		self.y_zed = 0.0
+		self.sensors_data = sl.SensorsData()
 		#self.curr_signs_image_msg = self.cv2_to_imgmsg(self.image_ocv)
 		self.timer = self.create_timer(0.00001,self.detect, callback_group=timer_group)
 	
-	
+	def get_zed_imu_angle(self):
+		self.zed.get_sensors_data(self.sensors_data, sl.TIME_REFERENCE.IMAGE)
+		quaternion = self.sensors_data.get_imu_data().get_pose().get_orientation().get()
+		roll,pitch,yaw=euler_from_quaternion(quaternion.get()[0],quaternion.get()[1],quaternion.get()[2],quaternion.get()[3])
+		self.zed_angle.publish(Float64(data=yaw))
+
 	def orange_display(self, contours, image):
 		if contours:
 			self.orange_dis = True
@@ -276,6 +297,7 @@ class Detections(Node):
 	def detect(self):
 		if self.state == 3:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				self.get_zed_imu_angle()
 				# Retrieve left image
 				# self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
@@ -323,7 +345,6 @@ class Detections(Node):
 					cv2.rectangle(self.image_ocv, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
 					cv2.putText(self.image_ocv, 'Naranja '  , (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
 
 					err, point_cloud_value = self.point_cloud.get_value(self.x, self.y)
 					#distance = 0
@@ -376,6 +397,7 @@ class Detections(Node):
 
 		elif self.state == 4:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				self.get_zed_imu_angle()
 				# Retrieve left image
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.x_zed = round(self.image.get_width() / 2)
@@ -439,6 +461,7 @@ class Detections(Node):
 		
 		elif self.state==2:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				self.get_zed_imu_angle()
 				# Retrieve left image
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.x_zed = round(self.image.get_width() / 2)
@@ -510,10 +533,10 @@ class Detections(Node):
 									self.CA.distance = self.distance
 									self.CA.x = self.x - self.x_zed
 									if self.x > (self.x_zed+50):
-										self.get_logger().info(f"Botella a la derecha por: {self.x_zed - self.x} pixeles")
+										self.get_logger().info(f"Botella a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles")
 										self.CA.detected = False
 									elif self.x < (self.x_zed-50):
-										self.get_logger().info(f"Botella a la izquierda por: {self.x - self.x_zed} pixeles")
+										self.get_logger().info(f"Botella a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles")
 										self.CA.detected = False
 									else: #self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
 										self.get_logger().info(f"Botella al centro")
@@ -542,6 +565,7 @@ class Detections(Node):
 		
 		elif self.state==0:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				self.get_zed_imu_angle()
 				# Retrieve left image
 				self.zed.retrieve_image(self.image, sl.VIEW.LEFT)
 				self.image_ocv = self.image.get_data()
@@ -563,6 +587,8 @@ class Detections(Node):
 						object = Bool()
 						object.data = True
 						self.obstacle.publish(object)
+
+					self.distance_obstacle.publish(Int8(data=self.distance))
 						
 				self.publisher_.publish(self.cv2_to_imgmsg_resized(self.image_ocv, self.quality))	
 						
