@@ -129,6 +129,7 @@ class SearchAuxiliar(Node):
 	def move_distance(self,x,y):
 		relative_distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
 		while(relative_distance>1.5):
+			relative_distance = math.sqrt(math.pow(x-self.x_rover,2)+math.pow(y-self.y_rover,2))
 			self.twist.linear.x=self.linear_velocity
 			self.cmd_vel.publish(self.twist)
 
