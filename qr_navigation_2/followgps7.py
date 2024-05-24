@@ -53,6 +53,8 @@ class Follow_GPS(Node):
 		self.state_subscription = self.create_subscription(Int8,"/state",self.update_state,1,callback_group=listener_group)
 		self.obstacle_subscription = self.create_subscription(Bool,"/object_detected",self.obstacle_detection,1,callback_group=listener_group)
 		self.distance_subscription = self.create_subscription(Int32,"/distance",self.distance_obstacle,1,callback_group=listener_group)
+		self.zed_angle = self.create_subscription(Float64,"/zed_angle",self.update_zed_angle,1,callback_group=listener_group)
+		self.zed_yaw = 0.0
 		self.obstacle_distance = None
 		#Velocity data
 		self.twist = Twist()
@@ -141,6 +143,13 @@ class Follow_GPS(Node):
 		quat = msg.orientation
 		angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
 		self.yaw_angle = angle_z
+		yaw_angle = self.yaw_angle+self.zed_yaw
+		if(yaw_angle>self.yaw_angle*2-0.1 and yaw_angle<self.yaw_angle*2+0.1):
+			self.yaw_angle = yaw_angle/2
+		
+
+	def update_zed_angle(self,msg):
+		self.zed_yaw = msg.data
 
 	def calc_angle(self):
 		'''Calculates the target angle with the target position and the current position'''
