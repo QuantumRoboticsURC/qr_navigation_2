@@ -583,11 +583,15 @@ class Detections(Node):
 										point_cloud_value[1] * point_cloud_value[1] +
 										point_cloud_value[2] * point_cloud_value[2])
 					self.get_logger().info("Distancia "+str(self.distance))
+
 					if(self.distance<650):
 						object = Bool()
 						object.data = True
-						self.obstacle.publish(object)
+					else:
+						object = Bool()
+						object.data = False
 
+					self.obstacle.publish(object)
 					self.distance_obstacle.publish(Int8(data=self.distance))
 						
 				self.publisher_.publish(self.cv2_to_imgmsg_resized(self.image_ocv, self.quality))	

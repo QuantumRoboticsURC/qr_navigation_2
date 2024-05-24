@@ -31,7 +31,8 @@ setup(
                             'node_detection_ros2=qr_navigation_2.node_detection:main',
                             'web_inter = qr_navigation_2.intermediary_web:main',
                             'searching=qr_navigation_2.searching:main',
-                            'auxiliary_search=qr_navigation_2.auxiliary_search:main'
+                            'auxiliary_search=qr_navigation_2.auxiliary_search:main',
+                            'followGPS7=qr_navgation_2.followgps7:main'
         ],
     },
 )

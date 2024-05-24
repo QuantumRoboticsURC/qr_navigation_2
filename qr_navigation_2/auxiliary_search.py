@@ -34,7 +34,7 @@ def euler_from_quaternion(x, y, z, w):
 
 class SearchAuxiliar(Node):
 	def __init__(self):
-		super().__init__("AuxiliarySearch")
+		super().__init__("auxiliary_search")
 
 		timer_group = MutuallyExclusiveCallbackGroup()
 		listener_group = ReentrantCallbackGroup()

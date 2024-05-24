@@ -30,8 +30,8 @@ def generate_launch_description():
         ),
         launch_ros.actions.Node(
             package='qr_navigation_2',
-            executable='searching',
-            name='searching',
+            executable='auxiliary_search',
+            name='auxiliary_search',
             output='screen'
         )
         

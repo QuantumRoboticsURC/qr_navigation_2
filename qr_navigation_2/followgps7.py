@@ -35,7 +35,7 @@ def euler_from_quaternion(x, y, z, w):
 class Follow_GPS(Node):
 	
 	def __init__(self):
-		super().__init__('gps6')
+		super().__init__('gps7')
 		#Multiple Threads to avoid stopping the process of the main thread of the program
 		timer_group = MutuallyExclusiveCallbackGroup()
 		listener_group = ReentrantCallbackGroup()
@@ -201,7 +201,7 @@ class Follow_GPS(Node):
 			state = Int8()
 			arrived = Bool()
 			if(not self.just_started):
-				self.get_logger().info("Entered Follow GPS v6.1")
+				self.get_logger().info("Entered Follow GPS v7.1")
 				self.just_started=True
 			if(self.target_coordinates[0]!=None and self.target_coordinates[1]!=None): #Checks that the target coordinates are not null
 				self.get_logger().info(f"The target coordinates are {self.target_coordinates}")
