@@ -457,11 +457,11 @@ class Detections(Node):
 						self.distance=None
 						self.get_logger().info("Not detected " + str(self.aruco_dis))
 						self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
-
-			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-			cv2.putText(detected_markers, f"Posicion: {self.posicion}", (self.x, self.y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
-			#self.get_logger().info("Publicando video")
+				else:
+					cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+					cv2.putText(detected_markers, f"Posicion: {self.posicion}", (self.x, self.y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
+					#self.get_logger().info("Publicando video")
 		
 		elif self.state==2:
 			if self.zed.grab(self.runtime_parameters) == sl.ERROR_CODE.SUCCESS:
