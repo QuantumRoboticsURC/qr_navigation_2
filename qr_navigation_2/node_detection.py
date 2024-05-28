@@ -368,13 +368,14 @@ class Detections(Node):
 							self.CA.distance = self.distance
 							self.CA.x = self.x - self.x_zed
 							
-							if self.x > (self.x_zed+20):
-								self.get_logger().info(f"Objeto naranja a la derecha por: {self.x_zed - self.x} pixeles")
+							if self.x > (self.x_zed+self.PIXEL_DISTANCE):
+								self.get_logger().info(f"Objeto naranja a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 								self.CA.detected = False
-							elif self.x < (self.x_zed-20):
-								self.get_logger().info(f"Objetonaranja a la izquierda por: {self.x - self.x_zed} pixeles")
+							elif self.x < (self.x_zed-self.PIXEL_DISTANCE):
+								self.get_logger().info(f"Objetonaranja a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 								self.CA.detected = False
-							elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+							#elif self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
+							else:
 								self.get_logger().info(f"Objeto al centro")
 								cv2.putText(detected_orange, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 								self.CA.detected = True
@@ -384,8 +385,8 @@ class Detections(Node):
 							self.get_logger().info("Not detected "+str(self.orange_dis))
 							self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
 
-					cv2.putText(detected_orange, f"Distancia: {self.distance}", (x, y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-					cv2.putText(detected_orange, f"Posicion: {self.posicion}", (x, y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+					cv2.putText(detected_orange, f"Distancia: {self.distance}", (self.x, self.y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+					cv2.putText(detected_orange, f"Posicion: {self.posicion}", (self.x, self.y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 					#self.cv2_to_imgmsg(detected_orange)
 					self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_orange,self.quality))
 					#self.get_logger().info("Publicando video")
@@ -446,7 +447,7 @@ class Detections(Node):
 						elif self.x < (self.x_zed-self.PIXEL_DISTANCE):
 							self.get_logger().info(f"Aruco a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 							self.CA.detected = False
-						else: #self.x >= (self.x_zed-50) and self.x <= (self.x_zed+50):
+						else: 
 							self.get_logger().info(f"Aruco al centro")
 							cv2.putText(detected_markers, f"Centro", (self.x, self.y -80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 							self.CA.detected = True
@@ -455,7 +456,10 @@ class Detections(Node):
 					else:
 						self.distance=None
 						self.get_logger().info("Not detected " + str(self.aruco_dis))
-			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y -70), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+						self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+
+			cv2.putText(detected_markers, f"Distancia: {self.distance}", (self.x, self.y - 64), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+			cv2.putText(detected_markers, f"Posicion: {self.posicion}", (self.x, self.y - 37), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 			self.publisher_.publish(self.cv2_to_imgmsg_resized(detected_markers, self.quality))
 			#self.get_logger().info("Publicando video")
 		
@@ -532,11 +536,12 @@ class Detections(Node):
 									
 									self.CA.distance = self.distance
 									self.CA.x = self.x - self.x_zed
-									if self.x > (self.x_zed+50):
-										self.get_logger().info(f"Botella a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles")
+
+									if self.x > (self.x_zed+self.PIXEL_DISTANCE):
+										self.get_logger().info(f"Botella a la derecha por: {self.x_zed+self.PIXEL_DISTANCE - self.x} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 										self.CA.detected = False
-									elif self.x < (self.x_zed-50):
-										self.get_logger().info(f"Botella a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles")
+									elif self.x < (self.x_zed-self.PIXEL_DISTANCE):
+										self.get_logger().info(f"Botella a la izquierda por: {self.x - self.x_zed-self.PIXEL_DISTANCE} pixeles \nCorrección: {self.PIXEL_DISTANCE*(1200/self.distance)}")
 										self.CA.detected = False
 									else: #self.x >= (self.x_zed-20) and self.x <= (self.x_zed+20):
 										self.get_logger().info(f"Botella al centro")
@@ -546,6 +551,8 @@ class Detections(Node):
 								else:
 									self.distance=None
 									self.get_logger().info("Not detected " + str(self.bottle_dis))
+									self.get_logger().info(f"x_z: {self.x_zed} y_z: {self.y_zed}")
+
 
 							cv2.putText(detected_bottle, f"Distancia: {self.distance}", (max_bbox[0], max_bbox[1] - 64),
 										cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
