@@ -6,6 +6,8 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from threading import Thread
 
 from .submodules.alvinxy import *
+from .submodules.constants import *
+
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
 from std_msgs.msg import Int8,Bool,Int32
@@ -73,11 +75,6 @@ class Follow_GPS(Node):
 		self.HAS_STARTED = True
 		#Default value of the state
 		self.state = -1
-		#Errors for the distance and coordinate stoppage routines
-		self.coordinate_error = 0.000005  
-		self.distance_error = 1.2
-		#Angle error for correction
-		self.angle_error = 0.08
 		#Variable for range distance
 		self.range_distance = 1.0
 		self.just_started = False
@@ -130,9 +127,8 @@ class Follow_GPS(Node):
 		'''Decides the best direction to rotate towards the target angle'''
 		ang_error = target_angle-self.yaw_angle
 		ang_error_adj=math.atan2(math.sin(ang_error),math.cos(ang_error))
-		if(ang_error_adj>0):
-			return 1
-		return -1
+		return ang_error_adj/abs(ang_error_adj)
+
 			
 	
 	def angle_correction(self,target_angle):
@@ -143,23 +139,27 @@ class Follow_GPS(Node):
 
 	def check_coord_precision(self):
 		'''Boolean expression for the coordinate precision stoppage routine'''
-		var = (self.gps_coordinates[0]>(self.target_coordinates[0]-self.coordinate_error) and self.gps_coordinates[0]<(self.target_coordinates[0]+self.coordinate_error)) and (self.gps_coordinates[1]>(self.target_coordinates[1]-self.coordinate_error) and self.gps_coordinates[1]<(self.target_coordinates[1]+self.coordinate_error))
+		var = (
+				(self.gps_coordinates[0]>(self.target_coordinates[0]-COORDINATE_ERROR) and self.gps_coordinates[0]<(self.target_coordinates[0]+COORDINATE_ERROR)) 
+        		and (self.gps_coordinates[1]>(self.target_coordinates[1]-COORDINATE_ERROR) and self.gps_coordinates[1]<(self.target_coordinates[1]+COORDINATE_ERROR))
+		)		
 		return var
 
 	def check_distance_precision(self):
 		'''Boolean expression for the distance precision stoppage routine'''
-		var = (self.x_rover>(self.x_target-self.distance_error) and self.x_rover<(self.x_target+self.distance_error)) and (self.y_rover>(self.x_target-self.distance_error) and self.y_rover<(self.y_target+self.distance_error))
+		var = ((self.x_rover>(self.x_target-DISTANCE_ERROR) and self.x_rover<(self.x_target+DISTANCE_ERROR))
+         	and (self.y_rover>(self.x_target-DISTANCE_ERROR) and self.y_rover<(self.y_target+DISTANCE_ERROR)))
 		return var
 
+	def check_angle_precision(self,target_angle):
+		return not((self.yaw_angle>(target_angle-ANGLE_ERROR*2)) and (self.yaw_angle<(target_angle+ANGLE_ERROR*2)))
 
 	def followGPSFunction(self,target_angle,distance):
-		if(not((self.yaw_angle>(target_angle-self.angle_error*2)) and (self.yaw_angle<(target_angle+self.angle_error*2)))):
+		if(self.check_angle_precision(target_angle)):
 			self.angle_correction(target_angle)
 		elif(distance > 2.5):
 			self.twist.linear.x = self.linear_velocity
 			self.twist.angular.z = 0.0
-
-
 
 
 	def followGPS(self):
