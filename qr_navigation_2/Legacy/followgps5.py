@@ -5,7 +5,7 @@ from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from threading import Thread
 
-from .submodules.alvinxy import *
+from ..submodules.alvinxy import *
 from geometry_msgs.msg import Twist, Quaternion
 from sensor_msgs.msg import NavSatFix,Imu
 from std_msgs.msg import Int8,Bool

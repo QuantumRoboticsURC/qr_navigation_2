@@ -49,12 +49,8 @@ class Follow_GPS(Node):
 		self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10)    
 		#Subscriber to the state topic of the node controller
 		self.create_subscription(Int8,"/state",self.update_state,1)
-		self.create_subscription(Bool,"/object_detected",self.obstacle_detection,1)
-		self.create_subscription(Int32,"/distance",self.distance_obstacle,1)
-		self.create_subscription(Float64,"/zed_angle",self.update_zed_angle,1)
 
-		self.zed_yaw = 0.0
-		self.obstacle_distance = None
+
 		#Velocity data
 		self.twist = Twist()
 		self.linear_velocity = 0.25
@@ -190,7 +186,6 @@ class Follow_GPS(Node):
 					self.angle_correction(target_angle)
 
 					self.followGPSFunction(target_angle,distance)
-
 
 					self.cmd_vel.publish(self.twist)
 
