@@ -11,7 +11,7 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='qr_navigation_2',
             executable='followGPS',
-            name='gps6',
+            name='gps8',
             output='screen'
             
         ),

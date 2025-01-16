@@ -62,7 +62,7 @@ class SearchAuxiliar(Node):
 		self.route = [(0,0),(0,-4),(-4,4),(-4,0),(-4,4),(0,4),(4,4),(4,0),(4,-4),(4,-8),(0,-8),(-4,-8),(-8,-8),(-8,-4),(-8,8),(-8,12),(-4,12),(0,12),(4,12),(8,12),(12,12)]
 		self.current_point = self.route[0]
 		self.found = False
-		self.timer = self.create_timer(0.001,self.routine,callback_group=timer_group)
+		self.timer = self.create_timer(0.1,self.routine,callback_group=timer_group)
 
 	def update_state(self,msg):
 		self.state=msg.data
