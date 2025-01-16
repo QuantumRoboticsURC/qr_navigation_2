@@ -182,21 +182,24 @@ class Follow_GPS(Node):
 		'''Boolean expression for the coordinate precision stoppage routine'''
 		var = (
 				(self.gps_coordinates[0]>(self.target_coordinates[0]-COORDINATE_ERROR) and self.gps_coordinates[0]<(self.target_coordinates[0]+COORDINATE_ERROR)) 
-        		and (self.gps_coordinates[1]>(self.target_coordinates[1]-COORDINATE_ERROR) and self.gps_coordinates[1]<(self.target_coordinates[1]+COORDINATE_ERROR))
+				and (self.gps_coordinates[1]>(self.target_coordinates[1]-COORDINATE_ERROR) and self.gps_coordinates[1]<(self.target_coordinates[1]+COORDINATE_ERROR))
 		)		
 		return var
 
 	def check_distance_precision(self):
 		'''Boolean expression for the distance precision stoppage routine'''
 		var = ((self.x_rover>(self.x_target-DISTANCE_ERROR) and self.x_rover<(self.x_target+DISTANCE_ERROR))
-         	and (self.y_rover>(self.x_target-DISTANCE_ERROR) and self.y_rover<(self.y_target+DISTANCE_ERROR)))
+		 	and (self.y_rover>(self.x_target-DISTANCE_ERROR) and self.y_rover<(self.y_target+DISTANCE_ERROR)))
 		return var
 
 	def check_angle_precision(self,target_angle):
 		return not((self.yaw_angle>(target_angle-ANGLE_ERROR*2)) and (self.yaw_angle<(target_angle+ANGLE_ERROR*2)))
 
 	def obstacle_evader(self):
-		pass
+		if self.obstacle_routine == 1:
+			print("Coco")
+		elif self.obstacle_routine == 2:
+			print("Andrés")
 
 	def followGPSFunction(self,target_angle,distance):
 		if(self.obstacle_detected):
@@ -223,7 +226,7 @@ class Follow_GPS(Node):
 				self.state_pub.publish(state)
 				self.cmd_vel.publish(self.twist)
 				time.sleep(2)
-    
+	
 	def followGPS(self):
 		
 		if(self.state==0): #Checks if the state is the one assigned to FGPS
@@ -231,7 +234,7 @@ class Follow_GPS(Node):
 			if(not self.just_started):
 				self.get_logger().info("Entered Follow GPS v8.1")
 				self.just_started=True
-    
+	
 			if(self.target_coordinates[0]!=None and self.target_coordinates[1]!=None): #Checks that the target coordinates are not null
 				self.get_logger().info(f"The target coordinates are {self.target_coordinates}")
 				if((self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0 )or (self.gps_coordinates[0] is not None and self.gps_coordinates[1] is not None)): #Checks that the gps readings are valid
