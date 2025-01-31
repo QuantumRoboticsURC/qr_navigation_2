@@ -66,14 +66,14 @@ class Follow_GPS(Node):
         
         #Coordinates and position on the plane
         self.gps_coordinates = [0.0,0.0]
-        self.target_coordinates = [0.0,0.0]
+        self.target_coordinates = [None,None]
         self.x_rover,self.y_rover,self.yaw_angle,self.pitch_angle = 0.0,0.0,0.0,0.0
         #Target x,y coordinates
         self.x_target = 0.0
         self.y_target = 0.0
         #Origin's latitude and logitude to map the plane using the alvinxy library
-        self.orglong = 0.0
-        self.orglat = 0.0
+        self.orglong = None
+        self.orglat = None
         #Flag for the initial coordinate registered
         self.HAS_STARTED = True
         #Default value of the state
@@ -92,31 +92,31 @@ class Follow_GPS(Node):
 
     def update_position(self):
         '''Updates the rover's position relative to the origin'''
-        if self.orglat !=0.0 and self.orglong!=0.0 and self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0:
+        if self.orglat is not None and self.orglong is not None and self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0:
             self.x_rover,self.y_rover = ll2xy(self.gps_coordinates[0] ,self.gps_coordinates[1] ,self.orglat,self.orglong)
     
-    def update_coords(self,data):
-        '''Updates the coordinates based on the data given by the GPS'''
-        if(self.HAS_STARTED):
-            self.orglong = data.lon/(10000000.0)
-            self.orglat = data.lat/(10000000.0)
-            self.HAS_STARTED = False
-        self.gps_coordinates[0]=data.lat/(10000000.0)
-        self.gps_coordinates[1]=data.lon/(10000000.0)
+    # def update_coords(self,data):
+    #     '''Updates the coordinates based on the data given by the GPS'''
+    #     if(self.HAS_STARTED):
+    #         self.orglong = data.lon/(10000000.0)
+    #         self.orglat = data.lat/(10000000.0)
+    #         self.HAS_STARTED = False
+    #     self.gps_coordinates[0]=data.lat/(10000000.0)
+    #     self.gps_coordinates[1]=data.lon/(10000000.0)
 
-        if(not self.HAS_STARTED):
-            self.update_position()
+    #     if(not self.HAS_STARTED):
+    #         self.update_position()
 
     def update_coords_latitude(self,data):
         '''Updates the latitude of the rover's position'''
-        if self.orglat==0.0:
+        if self.orglat is None:
             self.orglat = data.data/10000000.0
         self.gps_coordinates[0] = data.data/10000000.0
         self.update_position()
 
     def update_coords_longitude(self,data):
         '''Updates the longitude of the rover's position'''
-        if self.orglong==0.0:
+        if self.orglong is None:
             self.orglong = data.data/10000000.0
         self.gps_coordinates[1] = data.data/10000000.0
         self.update_position()
@@ -196,71 +196,75 @@ class Follow_GPS(Node):
             print("Andrés")
 
     def followGPSFunction(self,target_angle,distance):
-        self.get_logger().info(f"Rover: {self.x_rover},{self.y_rover},a{self.yaw_angle}\n has a target angle of {target_angle}\ntarget: {self.x_target},{self.y_target}")
+        self.get_logger().debug(f"Rover: {self.x_rover},{self.y_rover},a{self.yaw_angle}\n has a target angle of {target_angle}\ntarget: {self.x_target},{self.y_target}")
         
-        if self.check_coord_precision() or self.check_distance_precision():
+        if self.check_coord_precision() or self.check_distance_precision() or distance < 2:
             if self.check_coord_precision():
-                self.get_logger().info("finished by coords")
+                self.get_logger().debug("finished by coords")
             else:
-                self.get_logger().info("finished by distance")
+                self.get_logger().debug("finished by distance")
+            self.state = -1
             state = Int8()
             arrived = Bool()
             self.twist.linear.x = 0.0
             self.twist.angular.z = 0.0
             state.data = -1
-            self.target_coordinates[0]=0.0
-            self.target_coordinates[1]=0.0
+            self.target_coordinates[0]=None
+            self.target_coordinates[1]=None
             self.HAS_STARTED=True
-            self.orglat = 0.0
-            self.orglong = 0.0
+            self.orglat,self.orglong = None,None
             arrived.data=True
+            
             self.arrived_pub.publish(arrived)
             self.state_pub.publish(state)
             self.cmd_vel.publish(self.twist)
-            time.sleep(2)
+            #time.sleep(2)
+            
             return
         elif(self.obstacle_detected):
-            self.get_logger().info(f"Obstacle")
+            self.get_logger().debug(f"Obstacle")
             self.obstacle_evader()
         elif(self.check_angle_precision(target_angle)):
-            self.get_logger().info(f"Rotate")
+            self.get_logger().debug(f"Rotate")
             self.angle_correction(target_angle)
         elif(distance > 2.5):
-            self.get_logger().info("Correcting distance")
-
-            self.get_logger().info(f"Go")
+            self.get_logger().debug("Correcting distance")
+            self.get_logger().debug(f"Go")
             self.twist.linear.x = self.linear_velocity
             self.twist.angular.z = 0.0
-        
+        self.cmd_vel.publish(self.twist)
     
     def followGPS(self):
         #print(self.state)
-        if(self.state==0): #Checks if the state is the one assigned to FGPS
+        if self.state==0: #Checks if the state is the one assigned to FGPS
 
-            if(not self.just_started[0]):
-                self.get_logger().info("Entered Follow GPS v8.1")
+            if not self.just_started[0]:
+                self.get_logger().debug("Entered Follow GPS v8.1")
                 self.just_started[0]=True
     
-            if(self.target_coordinates[0]!=0.0 and self.target_coordinates[1]!=0.0): #Checks that the target coordinates are not null
-                if(not self.just_started[1]):
-                    self.get_logger().info(f"The target coordinates are {self.target_coordinates}")
-                    self.get_logger().info(f"The  coordinates are {self.gps_coordinates}")
+            if(self.target_coordinates[0] is not None and self.target_coordinates[1] is not None): #Checks that the target coordinates are not null
+                if not self.just_started[1]:
+                    self.get_logger().debug(f"The target coordinates are {self.target_coordinates}")
+                    self.get_logger().debug(f"The  coordinates are {self.gps_coordinates}")
                     self.just_started[1]=True
 
                 if((self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0 ) and
-                   (self.orglat !=0.0 and self.orglong!=0.0)): #Checks that the gps readings are valid
-                    if(not self.just_started[2]):
-                        self.get_logger().info(f"The gps coordinates are valid, setting org to: {self.orglat},{self.orglong}")
-                        self.get_logger().info(f"Routine")
+                   (self.orglat is not None and self.orglong is not None)): #Checks that the gps readings are valid
+                    if not self.just_started[2]:
+                        self.get_logger().debug(f"The gps coordinates are valid, setting org to: {self.orglat},{self.orglong}")
+                        self.get_logger().debug(f"Routine")
+                        self.just_started[2]=True
+                        
                     #calculates the target x,y using the target coords and the origin
                     self.x_target,self.y_target = ll2xy(self.target_coordinates[0],self.target_coordinates[1],self.orglat,self.orglong)
                     #calculates the distance between the current position and the target position
                     distance = distanceBetweenCoords(self.gps_coordinates[0],self.gps_coordinates[1],self.target_coordinates[0],self.target_coordinates[1])
+                    
                     target_angle = self.calc_angle()
                     self.check_for_obstacles()
                     self.followGPSFunction(target_angle,distance)
-                    self.cmd_vel.publish(self.twist)
-                    self.get_logger().info(f"twist: {self.twist}")
+                    
+                    #self.get_logger().debug(f"twist: {self.twist}")
 
 
 
