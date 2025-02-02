@@ -7,7 +7,7 @@ from std_msgs.msg import Float64
 from custom_interfaces.msg import TargetCoordinates
 from geometry_msgs.msg import Quaternion
 from sensor_msgs.msg import Imu
-from .submodules.alvinxy import *
+from .submodules.alvinxy import ll2xy
 import math
 
 # Convert Quaternion to Euler angles

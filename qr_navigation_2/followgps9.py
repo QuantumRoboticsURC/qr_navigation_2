@@ -218,10 +218,10 @@ class Follow_GPS(Node):
         self.HAS_STARTED=True
         self.orglat,self.orglong = None,None
         arrived.data=True
-        
         self.arrived_pub.publish(arrived)
         self.state_pub.publish(state)
         self.cmd_vel.publish(self.twist)
+        
     def followGPSFunction(self,target_angle,distance):
         self.get_logger().info(f"Rover: {self.x_rover},{self.y_rover},a{self.yaw_angle}\n has a target angle of {target_angle}\ntarget: {self.x_target},{self.y_target}")
         
