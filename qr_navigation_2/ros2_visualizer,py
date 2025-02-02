@@ -1,0 +1,158 @@
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import numpy as np
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float64
+from custom_interfaces.msg import TargetCoordinates
+from .submodules.alvinxy import *
+
+# Function to convert GPS coordinates to X, Y
+def ll2xy(lat, lon, orglat, orglong):
+    x = (lon - orglong) * 111320  
+    y = (lat - orglat) * 110540  
+    return x, y
+
+# Simulated IMU function (Yaw update)
+def simulate_imu(yaw, target_angle, noise=0.05):
+    angle_error = target_angle - yaw
+    yaw += np.clip(angle_error, -0.05, 0.05)  # Gradual correction
+    yaw += np.random.normal(0, noise)  # Add IMU noise
+    return yaw
+
+class Visualizer(Node):
+    def __init__(self):
+        super().__init__('visualizer')
+        
+        # ROS2 Subscriptions
+        self.create_subscription(Float64, '/latitude', self.latitude_callback, 10)
+        self.create_subscription(Float64, '/longitude', self.longitude_callback, 10)
+        self.create_subscription(TargetCoordinates, '/target_coordinates', self.target_coordinates_callback, 10)
+
+        # Initialize GPS, Target, and Position Variables
+        self.orglat, self.orglong = 0, 0
+        self.targetlat, self.targetlon = 0, 0
+        self.gps_coordinates = [0.0, 0.0]
+        self.x_rover, self.y_rover = 0, 0
+        self.org_x, self.org_y, self.target_x, self.target_y = 0, 0, 0, 0
+        self.x_values, self.y_values, self.gps_data = [], [], []
+
+        # Yaw Angle Simulation (IMU)
+        self.yaw_angle = 0.0  
+
+        # Animation variables
+        self.num_points = 100
+        self.set_data = False
+
+        # Setup Visualization
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(8, 12))
+
+        # Main Path Visualization
+        self.ax1.set_title("Rover GPS Path Visualization")
+        self.ax1.set_xlabel("X (meters)")
+        self.ax1.set_ylabel("Y (meters)")
+
+        self.path, = self.ax1.plot([], [], 'b-', label='Rover Path')
+        self.rover_point, = self.ax1.plot([], [], 'ro', label='Rover')
+
+        # Second Plot for Error Tracking
+        self.ax2.set_xlim(0, self.num_points)
+        self.ax2.set_ylim(-5, 5)  
+        self.ax2.set_title("GPS Position & Angle Error Over Time")
+        self.ax2.set_xlabel("Frame")
+        self.ax2.set_ylabel("Error Magnitude")
+
+        self.error_line, = self.ax2.plot([], [], 'r-', label='Position Error (m)')
+        self.angle_error_line, = self.ax2.plot([], [], 'b-', label='Angle Error (radians)')
+
+        self.error_per_point = []
+        self.angle_errors = []
+        self.frame_numbers = []
+
+        # Timer for Mapping
+        self.timer = self.create_timer(0.1, self.map_gps)
+
+    def target_coordinates_callback(self, msg):
+        """Updates target coordinates."""
+        self.targetlat, self.targetlon = msg.latitude, msg.longitude
+        self.target_x, self.target_y = ll2xy(self.targetlat, self.targetlon, self.orglat, self.orglong)
+
+    def latitude_callback(self, msg):
+        """Handles latitude updates."""
+        if self.orglat == 0:
+            self.orglat = msg.data
+            if self.orglong != 0:
+                self.org_x, self.org_y = ll2xy(self.orglat, self.orglong, self.orglat, self.orglong)
+        self.gps_coordinates[0] = msg.data
+        self.update_position()
+
+    def longitude_callback(self, msg):
+        """Handles longitude updates."""
+        if self.orglong == 0:
+            self.orglong = msg.data
+            if self.orglat != 0:
+                self.org_x, self.org_y = ll2xy(self.orglat, self.orglong, self.orglat, self.orglong)
+        self.gps_coordinates[1] = msg.data
+        self.update_position()
+
+    def update_position(self):
+        """Updates rover's position relative to the origin."""
+        if self.orglat and self.orglong and self.gps_coordinates[0] and self.gps_coordinates[1]:
+            self.x_rover, self.y_rover = ll2xy(self.gps_coordinates[0], self.gps_coordinates[1], self.orglat, self.orglong)
+
+    def update(self, frame):
+        """Updates rover's position in the visualization."""
+        if frame < self.num_points:
+            x, y = self.x_rover, self.y_rover
+
+            # Calculate Target Angle
+            target_angle = np.arctan2(self.target_y - y, self.target_x - x)
+            self.yaw_angle = simulate_imu(self.yaw_angle, target_angle)
+
+            # Compute Errors
+            x_error = x - self.x_values[frame] if self.x_values else 0
+            y_error = y - self.y_values[frame] if self.y_values else 0
+            position_error = np.sqrt(x_error**2 + y_error**2)
+            angle_error = self.yaw_angle - target_angle
+
+            # Store Data
+            self.gps_data.append((x, y))
+            self.error_per_point.append(position_error)
+            self.angle_errors.append(angle_error)
+            self.frame_numbers.append(frame)
+
+            # Update path and rover marker
+            self.path.set_data([p[0] for p in self.gps_data], [p[1] for p in self.gps_data])
+            self.rover_point.set_data([x], [y])
+
+            # Update Error Plot
+            self.error_line.set_data(self.frame_numbers, self.error_per_point)
+            self.angle_error_line.set_data(self.frame_numbers, self.angle_errors)
+
+        return self.path, self.rover_point, self.error_line, self.angle_error_line
+
+    def map_gps(self):
+        """Maps GPS data and starts animation when data is available."""
+        if self.org_x and self.org_y and self.target_x and self.target_y and not self.set_data:
+            # Generate planned path
+            self.x_values = np.linspace(self.org_x, self.target_x, self.num_points)
+            self.y_values = np.linspace(self.org_y, self.target_y, self.num_points)
+
+            # Setup plot limits
+            self.ax1.set_xlim(min(self.x_values) - 10, max(self.x_values) + 10)
+            self.ax1.set_ylim(min(self.y_values) - 10, max(self.y_values) + 10)
+
+            self.ax1.plot(self.target_x, self.target_y, 'go', markersize=10, label='Target')
+            self.ax1.plot(self.x_values, self.y_values, 'k--', label='Planned Path')
+
+            # Create animation only once
+            self.ani = animation.FuncAnimation(self.fig, self.update, frames=self.num_points, interval=100, blit=False)
+            plt.legend()
+            self.set_data = True
+            plt.show()
+
+def main(args=None):
+    rclpy.init(args=args)
+    visualizer = Visualizer()
+    rclpy.spin(visualizer)
+    rclpy.shutdown()
