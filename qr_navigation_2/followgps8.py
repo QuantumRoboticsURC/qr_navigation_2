@@ -170,7 +170,7 @@ class Follow_GPS(Node):
         '''Corrects the rover's angle based on its current position and target angle'''
         sign = self.direction_planner(target_angle)
         self.twist.angular.z = sign*self.angular_velocity
-        self.twist.linear.x = 0.0	
+        self.twist.linear.x = 0.0
 
     def check_coord_precision(self):
         '''Boolean expression for the coordinate precision stoppage routine'''
@@ -196,13 +196,13 @@ class Follow_GPS(Node):
             print("Andrés")
 
     def followGPSFunction(self,target_angle,distance):
-        self.get_logger().debug(f"Rover: {self.x_rover},{self.y_rover},a{self.yaw_angle}\n has a target angle of {target_angle}\ntarget: {self.x_target},{self.y_target}")
+        self.get_logger().info(f"Rover: {self.x_rover},{self.y_rover},a{self.yaw_angle}\n has a target angle of {target_angle}\ntarget: {self.x_target},{self.y_target}")
         
-        if self.check_coord_precision() or self.check_distance_precision() or distance < 2:
+        if self.check_coord_precision() or self.check_distance_precision() or distance < 1:
             if self.check_coord_precision():
-                self.get_logger().debug("finished by coords")
+                self.get_logger().info("finished by coords")
             else:
-                self.get_logger().debug("finished by distance")
+                self.get_logger().info("finished by distance")
             self.state = -1
             state = Int8()
             arrived = Bool()
@@ -222,14 +222,14 @@ class Follow_GPS(Node):
             
             return
         elif(self.obstacle_detected):
-            self.get_logger().debug(f"Obstacle")
+            self.get_logger().info(f"Obstacle")
             self.obstacle_evader()
         elif(self.check_angle_precision(target_angle)):
-            self.get_logger().debug(f"Rotate")
+            self.get_logger().info(f"Rotate")
             self.angle_correction(target_angle)
         elif(distance > 2.5):
-            self.get_logger().debug("Correcting distance")
-            self.get_logger().debug(f"Go")
+            self.get_logger().info("Correcting distance")
+            self.get_logger().info(f"Go")
             self.twist.linear.x = self.linear_velocity
             self.twist.angular.z = 0.0
         self.cmd_vel.publish(self.twist)
@@ -239,20 +239,20 @@ class Follow_GPS(Node):
         if self.state==0: #Checks if the state is the one assigned to FGPS
 
             if not self.just_started[0]:
-                self.get_logger().debug("Entered Follow GPS v8.1")
+                self.get_logger().info("Entered Follow GPS v8.1")
                 self.just_started[0]=True
     
             if(self.target_coordinates[0] is not None and self.target_coordinates[1] is not None): #Checks that the target coordinates are not null
                 if not self.just_started[1]:
-                    self.get_logger().debug(f"The target coordinates are {self.target_coordinates}")
-                    self.get_logger().debug(f"The  coordinates are {self.gps_coordinates}")
+                    self.get_logger().info(f"The target coordinates are {self.target_coordinates}")
+                    self.get_logger().info(f"The  coordinates are {self.gps_coordinates}")
                     self.just_started[1]=True
 
                 if((self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0 ) and
                    (self.orglat is not None and self.orglong is not None)): #Checks that the gps readings are valid
                     if not self.just_started[2]:
-                        self.get_logger().debug(f"The gps coordinates are valid, setting org to: {self.orglat},{self.orglong}")
-                        self.get_logger().debug(f"Routine")
+                        self.get_logger().info(f"The gps coordinates are valid, setting org to: {self.orglat},{self.orglong}")
+                        self.get_logger().info(f"Routine")
                         self.just_started[2]=True
                         
                     #calculates the target x,y using the target coords and the origin
@@ -264,7 +264,7 @@ class Follow_GPS(Node):
                     self.check_for_obstacles()
                     self.followGPSFunction(target_angle,distance)
                     
-                    #self.get_logger().debug(f"twist: {self.twist}")
+                    #self.get_logger().info(f"twist: {self.twist}")
 
 
 
