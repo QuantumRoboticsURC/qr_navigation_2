@@ -13,32 +13,17 @@ from sensor_msgs.msg import NavSatFix,Imu,LaserScan
 from std_msgs.msg import Int8,Bool,Int32
 from ublox_ubx_msgs.msg import UBXNavHPPosLLH
 from custom_interfaces.msg import TargetCoordinates
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64,Float32MultiArray
 
 import numpy
 import math 
 import time 
 
 
-
-
-def euler_from_quaternion(x, y, z, w):
-    t0 = +2.0 * (w * x + y * z)
-    t1 = +1.0 - 2.0 * (x * x + y * y)
-    roll_x = math.atan2(t0, t1)
-    t2 = +2.0 * (w * y - z * x)
-    t2 = +1.0 if t2 > +1.0 else t2
-    t2 = -1.0 if t2 < -1.0 else t2
-    pitch_y = math.asin(t2)
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    yaw_z = math.atan2(t3, t4)
-    return roll_x, pitch_y, yaw_z # in radians
-
 class Follow_GPS(Node):
     
     def __init__(self):
-        super().__init__('gps8')
+        super().__init__('gps9')
 
         #State publishers to give feedback to the node controller
         self.cmd_vel = self.create_publisher(Twist,'cmd_vel',10)
@@ -51,7 +36,7 @@ class Follow_GPS(Node):
         #self.create_subscription(UBXNavHPPosLLH,'/gps_base/ubx_nav_hp_pos_llh',self.update_coords,qos_profile_sensor_data)
         self.create_subscription(Float64,'/latitude',self.update_coords_latitude,10)
         self.create_subscription(Float64,'/longitude',self.update_coords_longitude,10)
-        self.create_subscription(Imu, "/bno055/imu", self.update_angle, 10) 
+        self.create_subscription(Float32MultiArray, "/predicted_angle", self.update_angle, 10) 
         self.create_subscription(LaserScan,"/scan",self.lidar_callback,10)
         self.create_subscription(Int8,"/state",self.update_state,1)
 
@@ -67,7 +52,7 @@ class Follow_GPS(Node):
         #Coordinates and position on the plane
         self.gps_coordinates = [0.0,0.0]
         self.target_coordinates = [None,None]
-        self.x_rover,self.y_rover,self.yaw_angle,self.pitch_angle = 0.0,0.0,0.0,0.0
+        self.x_rover,self.y_rover,self.yaw_angle,self.pitch_angle,self.roll_angle = 0.0,0.0,0.0,0.0,0.0
         #Target x,y coordinates
         self.x_target = 0.0
         self.y_target = 0.0
@@ -95,17 +80,6 @@ class Follow_GPS(Node):
         if self.orglat is not None and self.orglong is not None and self.gps_coordinates[0]!=0.0 and self.gps_coordinates[1]!=0.0:
             self.x_rover,self.y_rover = ll2xy(self.gps_coordinates[0] ,self.gps_coordinates[1] ,self.orglat,self.orglong)
     
-    # def update_coords(self,data):
-    #     '''Updates the coordinates based on the data given by the GPS'''
-    #     if(self.HAS_STARTED):
-    #         self.orglong = data.lon/(10000000.0)
-    #         self.orglat = data.lat/(10000000.0)
-    #         self.HAS_STARTED = False
-    #     self.gps_coordinates[0]=data.lat/(10000000.0)
-    #     self.gps_coordinates[1]=data.lon/(10000000.0)
-
-    #     if(not self.HAS_STARTED):
-    #         self.update_position()
 
     def update_coords_latitude(self,data):
         '''Updates the latitude of the rover's position'''
@@ -127,11 +101,11 @@ class Follow_GPS(Node):
         
     def update_angle(self,msg):
         '''Updates the angle with the Imu's readings'''
-        quat = Quaternion()
-        quat = msg.orientation
-        angle_x,angle_y,angle_z = euler_from_quaternion(quat.x,quat.y,quat.z,quat.w)
-        self.yaw_angle = angle_z
-        self.pitch_angle = angle_y
+        data = msg.data
+        self.roll_angle = data[0]
+        self.pitch_angle = data[1]
+        self.yaw_angle = data[2]
+
 
     def lidar_callback(self,msg):
         '''Updates the range distance with the lidar's readings'''
@@ -198,6 +172,7 @@ class Follow_GPS(Node):
 
         if self.obstacle_routine == 0:  # Pitch-based obstacle (steep incline)
             self.get_logger().info("Steep incline detected, stopping movement")
+            self.twist.linear.x = -self.linear_velocity/4  # Reverse
             self.twist.angular.z = self.angular_velocity  # Rotate slightly to find a new path
         
         elif self.obstacle_routine == 1:  # LiDAR-based obstacle (object detected in front)
@@ -208,18 +183,15 @@ class Follow_GPS(Node):
             
     def stop_movement(self):
         self.state = -1
-        state = Int8()
-        arrived = Bool()
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
-        state.data = -1
-        self.target_coordinates[0]=None
-        self.target_coordinates[1]=None
+
+        self.target_coordinates=[None,None]
         self.HAS_STARTED=True
         self.orglat,self.orglong = None,None
-        arrived.data=True
-        self.arrived_pub.publish(arrived)
-        self.state_pub.publish(state)
+
+        self.arrived_pub.publish(Bool(data=True))
+        self.state_pub.publish(Int8(data=self.state))
         self.cmd_vel.publish(self.twist)
         
     def followGPSFunction(self,target_angle,distance):
