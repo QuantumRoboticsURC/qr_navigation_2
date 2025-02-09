@@ -5,7 +5,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Imu
 import numpy as np
 from filterpy.kalman import KalmanFilter
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64,Float32MultiArray
 
 
 def euler_from_quaternion(x, y, z, w):
@@ -62,7 +62,9 @@ class KalmanImu:
 
         # Compute predicted yaw direction
         yaw = self.kf.x[2]
-        return yaw
+        roll = self.kf.x[0]
+        pitch = self.kf.x[1]
+        return roll,pitch,yaw
 
 
 class ImuNode(Node):
@@ -72,9 +74,10 @@ class ImuNode(Node):
         super().__init__("imu_kalman")
 
         # Initialize variables
-        self.predicted_angle_pub = self.create_publisher(Float64, "/predicted_angle", 10)
+        self.predicted_angle_pub = self.create_publisher(Float32MultiArray, "/predicted_angle", 10)
         self.angle = 0.0
         self.gyro_x = self.gyro_y = self.gyro_z = 0.0
+        self.msg = Float32MultiArray()
         self.last_time = self.get_clock().now()
         self.predictor = KalmanImu()
 
@@ -97,11 +100,9 @@ class ImuNode(Node):
         current_time = self.get_clock().now()
         dt = (current_time.nanoseconds - self.last_time.nanoseconds) * 1e-9
         self.last_time = current_time
-
-        angle = self.predictor.predict(self.gyro_x, self.gyro_y, self.gyro_z, dt)
-        self.get_logger().info(f"Predicted angle: {angle}")
-        
-        self.predicted_angle_pub.publish(Float64(data=angle))
+        roll,pitch,yaw = self.predictor.predict(self.gyro_x, self.gyro_y, self.gyro_z, dt)
+        self.msg.data = [roll,pitch,yaw]
+        self.predicted_angle_pub.publish(self.msg)
 
 
 def main():
