@@ -16,7 +16,7 @@ class Center_approach(Node):
         
         #Publishers to give feedback to the controller
         self.arrived = self.create_publisher(Bool, "/arrived_ca", 10)
-        self.cmd_vel_ca = self.create_publisher(Twist, "/cmd_vel_ca", 10)
+        self.cmd_vel_ca = self.create_publisher(Twist, "/cmd_vel", 10)
         self.state_pub = self.create_publisher(Int8,"/state",1)
         #default state value
         self.state = -1
