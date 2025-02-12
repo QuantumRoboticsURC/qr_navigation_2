@@ -86,8 +86,11 @@ class Center_approach(Node):
 
     def center_and_approach(self):
         if(self.state in [2,3,4]):
+            print("ENTERED ")
             if (self.found):
+                print("FOUUUUUND")
                 self.get_logger().info(f"Estoy en center and approachs")
+                print("AAAAAAAAAAAAAAAAAA")
                 if(not self.finish):
                     if (self.center):
                         self.get_logger().info(f"The {self.relation[self.state]} is centered")
