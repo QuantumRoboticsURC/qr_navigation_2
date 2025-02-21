@@ -20,6 +20,7 @@ class Center_approach(Node):
         self.state_pub = self.create_publisher(Int8,"/state",1)
         #default state value
         self.state = -1
+        self.JUST_STARTED = False
         #Velocity values
         self.Twist = Twist()
         self.vel_x = 0.16
@@ -53,15 +54,22 @@ class Center_approach(Node):
         
     def aruco(self, msg): 
         '''Sets found to true if an aruco was found'''
-        self.found = msg.data
+        if self.state == 4:
+            self.found = msg.data
+            #print("The message data aruco is: ",msg.data)
+        
         
     def orange(self,msg):
         '''Sets found to true if an orange object is found'''
-        self.found = msg.data
+        if self.state == 3:
+            self.found = msg.data
+            #print("The message data orange is: ",msg.data)
         
     def bottle(self,msg):
         '''Sets found to true if a bottle is found'''
-        self.found = msg.data
+        if self.state == 2:
+            self.found = msg.data
+            #print("The message data bottle is: ",msg.data)
         
     def approach(self):
         '''Approaches the object while the distance to its is above the threshold'''
@@ -81,21 +89,23 @@ class Center_approach(Node):
             
             self.state_pub.publish(state)
             self.arrived.publish(arrived)
+            print("FINISHED CENTER AND APPROACH")
         
         self.cmd_vel_ca.publish(self.Twist) 
 
     def center_and_approach(self):
         if(self.state in [2,3,4]):
-            print("ENTERED ")
+            # print("ENTERED ")
+            if not self.JUST_STARTED:
+                print("Entered to the center and approach")
+                self.JUST_STARTED = True
+            print(f"Found: {self.found}")
             if (self.found):
                 print("FOUUUUUND")
-                self.get_logger().info(f"Estoy en center and approachs")
-                print("AAAAAAAAAAAAAAAAAA")
+                self.get_logger().info(f"Estoy en center and approach: finish: {self.finish}")
+                # print("AAAAAAAAAAAAAAAAAA")
                 if(not self.finish):
-                    if (self.center):
-                        self.get_logger().info(f"The {self.relation[self.state]} is centered")
-                        self.approach()
-                    elif (self.x+self.pixel_constante*(self.center_distance_constant/(self.distance+0.01))  < 0):
+                    if (self.x+self.pixel_constante*(self.center_distance_constant/(self.distance+0.01))  < 0):
                         self.Twist.linear.x = 0.0
                         self.Twist.angular.z = self.vel_theta
                         self.get_logger().info(f"The {self.relation[self.state]} is on the left")
@@ -103,7 +113,14 @@ class Center_approach(Node):
                         self.Twist.linear.x = 0.0
                         self.Twist.angular.z = -self.vel_theta
                         self.get_logger().info(f"The {self.relation[self.state]}  is on the right")
-                    self.cmd_vel_ca.publish(self.Twist)    
+                    else:
+                        self.approach()
+                else:
+                    self.Twist.linear.x = 0.0
+            else:
+                self.Twist.linear.x = 0.0
+                self.Twist.angular.z = 0.0    
+            self.cmd_vel_ca.publish(self.Twist)
     
 def main(args=None):
 	rclpy.init(args=args)
