@@ -33,7 +33,8 @@ setup(
                             'searching=qr_navigation_2.searching:main',
                             'auxiliary_search=qr_navigation_2.auxiliary_search:main',
                             'followGPS7=qr_navgation_2.followgps7:main',
-                            'coord=qr_navigation_2.coord_converter:main'
+                            'coord=qr_navigation_2.coord_converter:main',
+                            'sensors=qr_navigation_2.sensor_corrector:main',
         ],
     },
 )

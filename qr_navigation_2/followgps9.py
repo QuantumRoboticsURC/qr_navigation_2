@@ -105,19 +105,33 @@ class Follow_GPS(Node):
         self.roll_angle = data[0]
         self.pitch_angle = data[1]
         self.yaw_angle = data[2]
+        
+    def lidar_callback(self, msg):
+        '''Processes LiDAR scan data, only checking the front-facing portion'''
+        self.lidar_ranges = msg.ranges  # Store full LiDAR scan for reference
+        angle_min = msg.angle_min  # Min scan angle
+        angle_increment = msg.angle_increment  # Angle step per reading
+        total_ranges = len(self.lidar_ranges)
 
+        # Define front sector (e.g., 60° in front)
+        front_angle_range = math.radians(60)  # ±30° from the center
+        front_indices = [
+            i for i in range(total_ranges)
+            if abs(angle_min + i * angle_increment) < front_angle_range / 2
+        ]
 
-    def lidar_callback(self,msg):
-        '''Updates the range distance with the lidar's readings'''
-        ranges = msg.ranges
-        angle_min = msg.angle_min  # Starting angle of the scan
-        angle_increment = msg.angle_increment  # Increment per beam
+        # Extract front-facing distances
+        front_ranges = [self.lidar_ranges[i] for i in front_indices if not math.isinf(self.lidar_ranges[i])]
 
-        # Find the closest object
-        min_distance = min(ranges)  # Minimum range value (distance to closest object)
-        closest_index = ranges.index(min_distance)
-        closest_angle = angle_min + closest_index * angle_increment  # Angle to closest object
-        self.obstacle_min_distance = min_distance
+        # Ensure valid data exists
+        if len(front_ranges) > 0:
+            self.obstacle_min_distance = min(front_ranges)  # Closest object in front
+        else:
+            self.obstacle_min_distance = float('inf')  # No obstacles detected
+
+        # Log LiDAR detection
+        self.get_logger().info(f"Front obstacle distance: {self.obstacle_min_distance:.2f} m")
+
 
     def calc_angle(self):
         '''Calculates the target angle with the target position and the current position'''
@@ -133,15 +147,24 @@ class Follow_GPS(Node):
 
     
     def check_for_obstacles(self):
-        '''Checks if an obstacle is detected based on IMU pitch and LiDAR readings'''
-        if abs(self.pitch_angle) > 0.5:  # Example threshold for inclination
+        '''Checks for obstacles and steep inclines, adjusting speed dynamically'''
+        self.obstacle_detected = False
+
+        if abs(self.pitch_angle) > 0.5:  # Steep incline detected
             self.obstacle_routine = 0  # Pitch-based obstacle
             self.obstacle_detected = True
-        elif self.obstacle_min_distance < self.range_distance:
-            self.obstacle_routine = 1  # LiDAR-based obstacle
+
+        elif self.obstacle_min_distance < self.range_distance:  # LiDAR obstacle
+            self.obstacle_routine = 1
             self.obstacle_detected = True
-        else:
-            self.obstacle_detected = False
+        
+        if self.obstacle_detected:
+            return  # Skip speed adjustment if stopping
+
+        # Dynamic speed control for mild inclines
+        incline_factor = max(0.2, 1.0 - abs(self.pitch_angle))  # Reduce speed on slopes
+        self.linear_velocity = 0.2 * incline_factor
+
             
     def angle_correction(self,target_angle):
         '''Corrects the rover's angle based on its current position and target angle'''
@@ -170,17 +193,27 @@ class Follow_GPS(Node):
         '''Handles obstacle evasion based on detected obstacle type'''
         self.twist.linear.x = 0.0  # Stop movement initially
 
-        if self.obstacle_routine == 0:  # Pitch-based obstacle (steep incline)
-            self.get_logger().info("Steep incline detected, stopping movement")
-            self.twist.linear.x = -self.linear_velocity/4  # Reverse
-            self.twist.angular.z = self.angular_velocity  # Rotate slightly to find a new path
-        
-        elif self.obstacle_routine == 1:  # LiDAR-based obstacle (object detected in front)
-            self.get_logger().info("Obstacle detected, avoiding...")
-            if self.obstacle_min_distance < 1.0:
-                self.twist.linear.x = -0.1  # Small reverse
-            self.twist.angular.z = self.angular_velocity  # Turn to avoid obstacle
+        if self.obstacle_routine == 0:  # IMU-based obstacle (steep incline)
+            self.get_logger().info("Steep incline detected, reversing and turning")
+            self.twist.linear.x = -self.linear_velocity / 2  # Reverse slowly
+            self.twist.angular.z = self.angular_velocity * 1.2  # Sharper turn to change path
+
+        elif self.obstacle_routine == 1:  # LiDAR-based obstacle
+            self.get_logger().info("Obstacle detected, finding clear path")
             
+            # Scan left and right LiDAR ranges to decide the best turn
+            left_clearance = min(self.lidar_ranges[len(self.lidar_ranges)//2:])  # Right side scan
+            right_clearance = min(self.lidar_ranges[:len(self.lidar_ranges)//2])  # Left side scan
+
+            if left_clearance > right_clearance:
+                self.twist.angular.z = -self.angular_velocity  # Turn right
+                self.get_logger().info("Turning right to avoid obstacle")
+            else:
+                self.twist.angular.z = self.angular_velocity  # Turn left
+                self.get_logger().info("Turning left to avoid obstacle")
+
+            self.twist.linear.x = 0.1  # Slight forward movement while turning
+
     def stop_movement(self):
         self.state = -1
         self.twist.linear.x = 0.0
